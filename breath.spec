@@ -3,7 +3,7 @@ Version:        0.1.0
 Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
 License:        MPL-2.0
-URL:            https://github.com/mmazzarolo/breathly-app
+URL:            https://github.com/moriwaka/breath
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  cargo

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 license = "MPL-2.0"
 description = "A native GNOME breathing exercise application"
+homepage = "https://github.com/moriwaka/breath"
+repository = "https://github.com/moriwaka/breath"
 
 [lib]
 name = "breath"
