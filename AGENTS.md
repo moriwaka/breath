@@ -25,6 +25,14 @@
 - Validate desktop integration with `desktop-file-validate data/io.github.moriwaka.Breath.desktop` and `appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml`.
 - Do not add web UI dependencies or remote runtime assets.
 
+## Versioning
+
+- Any change to application behavior or user-visible functionality must bump
+  the minor version (for example, `0.1.0` to `0.2.0`).
+- Keep the version synchronized in `Cargo.toml`, `breath.spec`, the AppStream
+  release metadata, and `CHANGELOG.md`.
+- Use only the RPM `Release` field for rebuilds that do not change behavior.
+
 ## Work files and RPM
 
 - Use `./work/` for all temporary files, source archives, RPM build trees, logs, and generated package artifacts. Do not use `/tmp` or `/var/tmp` for project work.
