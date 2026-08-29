@@ -11,28 +11,29 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
+    container: fedora:latest
 
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Install stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-
       - name: Install build and validation tools
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
+          dnf install --assumeyes \
             appstream \
+            cargo \
             desktop-file-utils \
-            libadwaita-1-dev \
-            libgstreamer1.0-dev \
-            libgtk-4-dev \
-            pkg-config \
-            rpm \
-            rpmlint
+            git \
+            gcc \
+            libadwaita-devel \
+            gstreamer1-devel \
+            gtk4-devel \
+            make \
+            nodejs \
+            pkgconf-pkg-config \
+            rpm-build \
+            rpmlint \
+            rustfmt
+
+      - name: Check out source
+        uses: actions/checkout@v4
 
       - name: Check formatting
         run: cargo fmt -- --check
