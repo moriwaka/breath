@@ -3,7 +3,7 @@ Breath remaining work
 
 [High priority]
 
-- [ ] Create the GitHub repository and push the reviewed source history.
+- [x] Create the GitHub repository and push the reviewed source history.
 - [x] Complete a clean Fedora RPM build with the vendored Cargo dependencies.
 - [x] Install the generated RPM and verify that the application launches.
 - [ ] Verify audio playback, screen transitions, countdown, pause, resume, stop,
