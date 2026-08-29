@@ -11,7 +11,7 @@ Breath remaining work
 - [x] Add AT-SPI UI smoke tests for the countdown, controls, and
       screen transitions.
 - [x] Verify RPM dependencies and all installed file locations.
-- [ ] Reinstall the latest RPM after source changes and rerun `rpm -V`.
+- [x] Reinstall the latest RPM after source changes and rerun `rpm -V`.
 - [x] Run the AT-SPI smoke test against the installed RPM, not only the
       checkout binary.
 - [x] Fix the RPM source-archive commands in README.md and AGENTS.md. They

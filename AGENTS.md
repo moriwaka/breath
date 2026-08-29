@@ -87,6 +87,9 @@
 - Installing or updating the system package with `sudo rpm -Uvh ...`; this
   writes to `/usr` and requires the user's password. Package inspection with
   `rpm -qpl`, `rpm -qp --requires`, and `rpm -V` does not normally need root.
+- Run `rpm -V` for an installed system package outside the filesystem sandbox.
+  The sandbox can report synthetic file ownership and permissions, so its
+  result is not reliable for validating the real installation.
 - Running package post-install checks that update system-wide caches, such as
   GSettings schema or icon caches, when they are not already handled by the
   package manager.
