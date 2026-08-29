@@ -33,7 +33,7 @@ jobs:
             rustfmt
 
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Check formatting
         run: cargo fmt -- --check
