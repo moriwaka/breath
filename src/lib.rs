@@ -102,3 +102,116 @@ pub fn active_steps(preset: &Preset) -> Vec<(StepKind, u32)> {
     .filter(|(_, duration)| *duration > 0)
     .collect()
 }
+
+/// The externally visible lifecycle of a guided session.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SessionStatus {
+    Running,
+    Paused,
+    Completed,
+    Stopped,
+}
+
+/// Time-driven state for one guided breathing session.
+#[derive(Clone, Debug)]
+pub struct Session {
+    steps: Vec<(StepKind, u32)>,
+    phase_index: usize,
+    phase_elapsed_ms: u32,
+    session_elapsed_ms: u32,
+    session_limit_ms: Option<u32>,
+    status: SessionStatus,
+}
+
+impl Session {
+    /// Starts a session immediately. `None` denotes an unlimited session.
+    pub fn start(preset: &Preset, session_limit_ms: Option<u32>) -> Self {
+        Self {
+            steps: active_steps(preset),
+            phase_index: 0,
+            phase_elapsed_ms: 0,
+            session_elapsed_ms: 0,
+            session_limit_ms,
+            status: SessionStatus::Running,
+        }
+    }
+
+    pub fn status(&self) -> SessionStatus {
+        self.status
+    }
+
+    pub fn current_step(&self) -> Option<(StepKind, u32)> {
+        (self.status == SessionStatus::Running || self.status == SessionStatus::Paused)
+            .then(|| self.steps[self.phase_index])
+    }
+
+    pub fn phase_remaining_ms(&self) -> Option<u32> {
+        self.current_step()
+            .map(|(_, duration)| duration - self.phase_elapsed_ms)
+    }
+
+    pub fn session_remaining_ms(&self) -> Option<u32> {
+        self.session_limit_ms
+            .map(|limit| limit.saturating_sub(self.session_elapsed_ms))
+    }
+
+    pub fn pause(&mut self) {
+        if self.status == SessionStatus::Running {
+            self.status = SessionStatus::Paused;
+        }
+    }
+
+    pub fn resume(&mut self) {
+        if self.status == SessionStatus::Paused {
+            self.status = SessionStatus::Running;
+        }
+    }
+
+    pub fn stop(&mut self) {
+        if self.status == SessionStatus::Running || self.status == SessionStatus::Paused {
+            self.status = SessionStatus::Stopped;
+        }
+    }
+
+    /// Advances the session by active elapsed time in milliseconds.
+    pub fn advance(&mut self, elapsed_ms: u32) {
+        if self.status != SessionStatus::Running {
+            return;
+        }
+
+        let allowed_ms = self
+            .session_limit_ms
+            .map(|limit| {
+                limit
+                    .saturating_sub(self.session_elapsed_ms)
+                    .min(elapsed_ms)
+            })
+            .unwrap_or(elapsed_ms);
+
+        self.advance_phase(allowed_ms);
+        self.session_elapsed_ms = self.session_elapsed_ms.saturating_add(allowed_ms);
+
+        if self
+            .session_limit_ms
+            .is_some_and(|limit| self.session_elapsed_ms >= limit)
+        {
+            self.status = SessionStatus::Completed;
+        }
+    }
+
+    fn advance_phase(&mut self, mut elapsed_ms: u32) {
+        while elapsed_ms > 0 {
+            let (_, duration_ms) = self.steps[self.phase_index];
+            let remaining_ms = duration_ms - self.phase_elapsed_ms;
+
+            if elapsed_ms < remaining_ms {
+                self.phase_elapsed_ms += elapsed_ms;
+                return;
+            }
+
+            elapsed_ms -= remaining_ms;
+            self.phase_elapsed_ms = 0;
+            self.phase_index = (self.phase_index + 1) % self.steps.len();
+        }
+    }
+}
