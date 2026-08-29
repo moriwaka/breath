@@ -54,7 +54,7 @@ def main():
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        assert find_named(app, "4-7-8 Deep Calm"), "English preset name is missing"
+        assert find_named(app, "Deep Calm"), "English preset name is missing"
         preferences = find_named(app, "Preferences", "button")
         assert preferences, "English Preferences action is missing"
         invoke(preferences[0])

@@ -468,7 +468,7 @@ fn audio_path(asset: &str) -> PathBuf {
 
 fn preset_name(id: PresetId) -> &'static str {
     match id {
-        PresetId::DeepCalm => tr("4-7-8 深い落ち着き", "4-7-8 Deep Calm"),
+        PresetId::DeepCalm => tr("深い落ち着き", "Deep Calm"),
         PresetId::Awake => tr("目覚め", "Awake"),
         PresetId::Coherent => tr("コヒーレント呼吸", "Coherent Breathing"),
         PresetId::ExtendedExhale => tr("長い呼気", "Extended Exhale"),
@@ -609,5 +609,12 @@ mod tests {
         assert!(label.contains("7"));
         assert!(label.contains("4"));
         assert!(label.contains("8"));
+    }
+
+    #[test]
+    fn deep_calm_name_does_not_repeat_phase_durations() {
+        let name = preset_name(PresetId::DeepCalm);
+
+        assert!(!name.contains("4-7-8"));
     }
 }
