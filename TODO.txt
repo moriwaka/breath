@@ -17,7 +17,7 @@ Breath remaining work
 - [x] Fix the RPM source-archive commands in README.md and AGENTS.md. They
       currently omit the required `breath-<version>/` top-level directory, so
       `%autosetup` fails during `%prep`.
-- [ ] Remove or lifecycle-manage the Escape `EventControllerKey` when leaving a
+- [x] Remove or lifecycle-manage the Escape `EventControllerKey` when leaving a
       session. Each call to `show_session` currently adds another controller to
       the application window.
 

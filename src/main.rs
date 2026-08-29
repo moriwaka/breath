@@ -266,20 +266,22 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
 
     let keyboard_session = session.clone();
     let keyboard_audio = audio.clone();
-    let window_for_keyboard = window.clone();
+    let window_for_keyboard = window.downgrade();
     let settings_for_keyboard = settings.clone();
     let keyboard = gtk::EventControllerKey::new();
     keyboard.connect_key_pressed(move |_, key, _, _| {
         if key == gtk::gdk::Key::Escape {
             keyboard_session.borrow_mut().stop();
             keyboard_audio.stop();
-            show_home(&window_for_keyboard, &settings_for_keyboard);
+            if let Some(window) = window_for_keyboard.upgrade() {
+                show_home(&window, &settings_for_keyboard);
+            }
             gtk::glib::Propagation::Stop
         } else {
             gtk::glib::Propagation::Proceed
         }
     });
-    window.add_controller(keyboard);
+    toolbar.add_controller(keyboard);
 }
 
 fn session_length(settings: &gtk::gio::Settings) -> SessionLength {
