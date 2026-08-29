@@ -14,6 +14,12 @@ Breath remaining work
 - [ ] Reinstall the latest RPM after source changes and rerun `rpm -V`.
 - [x] Run the AT-SPI smoke test against the installed RPM, not only the
       checkout binary.
+- [ ] Fix the RPM source-archive commands in README.md and AGENTS.md. They
+      currently omit the required `breath-<version>/` top-level directory, so
+      `%autosetup` fails during `%prep`.
+- [ ] Remove or lifecycle-manage the Escape `EventControllerKey` when leaving a
+      session. Each call to `show_session` currently adds another controller to
+      the application window.
 
 [Medium priority]
 
@@ -23,6 +29,12 @@ Breath remaining work
 - [x] Add a README with build, development, and Fedora installation instructions.
 - [ ] Show a user-visible warning or fallback state when a guidance audio file
       or GStreamer decoder cannot be played.
+- [ ] Make the "Off" audio mode suppress the completion bell too, and add
+      regression coverage for the selected audio mode at session completion.
+- [ ] Add AppStream `<releases>` metadata and update it with Cargo, SPEC, and
+      CHANGELOG version changes as required by the repository versioning policy.
+- [ ] Add Clippy to the development and Fedora CI toolchain, then run it with
+      warnings treated as errors.
 
 [Low priority]
 
