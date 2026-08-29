@@ -30,7 +30,7 @@ jobs:
             pkgconf-pkg-config \
             rpm-build \
             rpmlint \
-            rust-clippy \
+            clippy \
             rustfmt
 
       - name: Check out source
