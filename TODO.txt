@@ -1,42 +1,8 @@
 Breath remaining work
 =====================
 
-[High priority]
-
-- [x] Create the GitHub repository and push the reviewed source history.
-- [x] Complete a clean Fedora RPM build with the vendored Cargo dependencies.
-- [x] Install the generated RPM and verify that the application launches.
-- [x] Verify audio playback, screen transitions, countdown, pause, resume, stop,
-      and back navigation on a real GNOME desktop.
-- [x] Add AT-SPI UI smoke tests for the countdown, controls, and
-      screen transitions.
-- [x] Verify RPM dependencies and all installed file locations.
-- [x] Reinstall the latest RPM after source changes and rerun `rpm -V`.
-- [x] Run the AT-SPI smoke test against the installed RPM, not only the
-      checkout binary.
-- [x] Fix the RPM source-archive commands in README.md and AGENTS.md. They
-      currently omit the required `breath-<version>/` top-level directory, so
-      `%autosetup` fails during `%prep`.
-- [x] Remove or lifecycle-manage the Escape `EventControllerKey` when leaving a
-      session. Each call to `show_session` currently adds another controller to
-      the application window.
-- [ ] Build, install, and verify the 0.3.0 RPM with `rpm -V` outside the
-      sandbox after the bilingual UI and Portal test changes.
-
 [Medium priority]
 
-- [x] Verify keyboard navigation, focus order, accessible labels, high-DPI
-      rendering, small windows, and dark theme behavior.
-- [x] Verify stopping or going back during the countdown behaves correctly.
-- [x] Add a README with build, development, and Fedora installation instructions.
-- [x] Show a user-visible warning or fallback state when a guidance audio file
-      or GStreamer decoder cannot be played.
-- [x] Make the "Off" audio mode suppress the completion bell too, and add
-      regression coverage for the selected audio mode at session completion.
-- [x] Add AppStream `<releases>` metadata and update it with Cargo, SPEC, and
-      CHANGELOG version changes as required by the repository versioning policy.
-- [x] Add Clippy to the development and Fedora CI toolchain, then run it with
-      warnings treated as errors.
 - [ ] Add automated UI coverage for the English locale path, including
       accessible names and the translated settings/session controls.
 - [ ] Add an automated UI test for the user-visible audio playback failure
@@ -46,16 +12,8 @@ Breath remaining work
 
 [Low priority]
 
-- [x] Add a concise man page for the `breath` command to remove the RPM lint
-      warning.
-- [x] Add GNOME screenshot-based UI regression tests.
 - [ ] Add committed, reproducible screenshot baselines or a GNOME-specific
       comparison strategy; the current test compares only when an external
       baseline directory is supplied.
-- [x] Add English UI translations alongside the Japanese UI and English metadata.
 - [ ] Update the stale AGENTS.md project description that still says the UI is
       Japanese-only.
-- [x] Prepare release versioning and a user-facing changelog.
-- [x] Review the SPEC file for Fedora repository submission requirements.
-- [x] Add CI coverage for offline Rust tests, metadata validation, RPM lint, and
-      the non-display UI smoke-test checks.
