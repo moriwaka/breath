@@ -45,6 +45,14 @@ Install the package with:
 sudo rpm -Uvh --replacepkgs work/rpmbuild/RPMS/x86_64/breath-0.4.0-1*.rpm
 ```
 
+## Release
+
+Prepare a new minor release by updating the version in `Cargo.toml`,
+`breath.spec`, the AppStream metadata, and `CHANGELOG.md`. After the verified
+commit is pushed to `main`, push a matching `vX.Y.0` tag. GitHub Actions then
+builds and validates the Fedora RPM, source tarball, and checksum manifest,
+attests the assets, and publishes them to a GitHub Release automatically.
+
 ## UI smoke test
 
 `tests/ui_smoke.py` uses AT-SPI and does not require a browser. Run it inside

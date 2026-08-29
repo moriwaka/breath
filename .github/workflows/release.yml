@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.0"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    container: fedora:latest
+
+    steps:
+      - name: Install build and release tools
+        run: |
+          dnf install --assumeyes \
+            appstream \
+            cargo \
+            clippy \
+            desktop-file-utils \
+            gh \
+            git \
+            gcc \
+            gzip \
+            libadwaita-devel \
+            gstreamer1-devel \
+            gtk4-devel \
+            make \
+            pkgconf-pkg-config \
+            rpm-build \
+            rpmlint \
+            rustfmt
+
+      - name: Check out tagged source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Validate release version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.0$ ]]
+          grep -q "^version = \"$version\"$" Cargo.toml
+          grep -q "^Version:[[:space:]]*$version$" breath.spec
+          grep -q "<release version=\"$version\"" data/io.github.moriwaka.Breath.metainfo.xml
+          grep -q "^## $version$" CHANGELOG.md
+
+      - name: Run release verification
+        run: |
+          cargo fmt -- --check
+          cargo test --offline
+          cargo clippy --all-targets --offline -- -D warnings
+          desktop-file-validate data/io.github.moriwaka.Breath.desktop
+          appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
+
+      - name: Build release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p work/release work/rpmbuild/SOURCES work/rpmbuild/TMP
+          git archive --format=tar --prefix="breath-${version}/" "$GITHUB_SHA" \
+            | gzip -n > "work/release/breath-${version}.tar.gz"
+          cp "work/release/breath-${version}.tar.gz" \
+            "work/rpmbuild/SOURCES/breath-${version}.tar.gz"
+          rpmbuild -ba breath.spec \
+            --define "_topdir $GITHUB_WORKSPACE/work/rpmbuild" \
+            --define "_sourcedir $GITHUB_WORKSPACE/work/rpmbuild/SOURCES" \
+            --define "_tmppath $GITHUB_WORKSPACE/work/rpmbuild/TMP"
+          cp work/rpmbuild/RPMS/x86_64/breath-${version}-*.rpm work/release/
+          rpmlint work/release/breath-${version}-*.rpm
+          sha256sum work/release/* > work/release/SHA256SUMS
+
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: work/release/*
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "v${version}" \
+            "work/release/breath-${version}-"*.rpm \
+            "work/release/breath-${version}.tar.gz" \
+            work/release/SHA256SUMS \
+            --verify-tag \
+            --title "Breath ${version}" \
+            --generate-notes

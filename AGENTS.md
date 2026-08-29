@@ -40,6 +40,12 @@
 - Keep the version synchronized in `Cargo.toml`, `breath.spec`, the AppStream
   release metadata, and `CHANGELOG.md`.
 - Use only the RPM `Release` field for rebuilds that do not change behavior.
+- For a release, update all four version locations, commit and push the
+  release-ready `main`, then push a `vX.Y.0` tag. The release workflow in
+  `.github/workflows/release.yml` performs the Fedora build, validation,
+  checksum generation, attestation, and GitHub Release asset upload.
+- Do not upload locally built release assets manually; the tagged workflow is
+  the source of truth for published RPMs and source tarballs.
 
 ## Work files and RPM
 
