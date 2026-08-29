@@ -47,8 +47,18 @@
 ## Git and safety
 
 - Inspect `git status --short` before editing and commit only intended source, test, metadata, and instruction changes.
+- At each coherent, verified milestone, commit the focused changes before
+  starting the next slice. Keep generated files under `work/` out of commits.
+- Before a milestone commit, run `git diff --check`, inspect the staged diff,
+  and verify the command that justifies the milestone actually passed.
 - Do not delete or reset user files. Ignore unrelated generated files.
 - Before reporting success, verify the final command for that claim actually passed.
+
+## Verified milestone
+
+- RPM build, RPM metadata/file checks, and the installed-package AT-SPI smoke
+  test have been completed once. Re-run them after changing the source or SPEC;
+  a same-version RPM must be reinstalled explicitly to test the new binary.
 
 ## Tasks that require running outside the sandbox
 

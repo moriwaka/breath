@@ -40,6 +40,7 @@ appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 %files
 %defattr(-,root,root,-)
 %license THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt
+%doc README.md CHANGELOG.md
 %{_bindir}/breath
 %{_datadir}/applications/io.github.moriwaka.Breath.desktop
 %{_metainfodir}/io.github.moriwaka.Breath.metainfo.xml
