@@ -31,6 +31,25 @@ impl PresetId {
         Self::Square,
         Self::Ujjayi,
     ];
+
+    pub const fn key(self) -> &'static str {
+        match self {
+            Self::DeepCalm => "deep-calm",
+            Self::Awake => "awake",
+            Self::Coherent => "coherent",
+            Self::ExtendedExhale => "extended-exhale",
+            Self::Pranayama => "pranayama",
+            Self::Square => "square",
+            Self::Ujjayi => "ujjayi",
+        }
+    }
+
+    pub fn from_key(value: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|id| id.key() == value)
+            .unwrap_or(Self::DeepCalm)
+    }
 }
 
 /// A fixed sequence of inhale, hold, exhale, and hold durations in milliseconds.

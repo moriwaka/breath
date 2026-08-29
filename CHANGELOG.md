@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+- Move breathing pattern selection into Preferences.
+- Remember the selected pattern and provide a home-screen Start button for it.
+
 ## 0.4.0
 
 - Distinguish the hold after inhaling from the hold after exhaling with

@@ -62,14 +62,15 @@ def main():
 
     command = sys.argv[1:] or ["breath"]
     environment = environ.copy()
+    environment.update({"LANGUAGE": "ja", "LC_ALL": "C", "LC_MESSAGES": "C", "LANG": "C"})
     if command[0].endswith("/breath") and command[0] != "breath":
         environment["GSETTINGS_SCHEMA_DIR"] = "work/gsettings"
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        presets = find_named(app, "4-7-8 深い落ち着き", "button")
-        assert presets, "home screen has no accessible preset action"
-        invoke(presets[0])
+        starts = find_named(app, "開始", "button")
+        assert starts, "home screen has no accessible start action"
+        invoke(starts[0])
 
         seen = set()
         deadline = time.monotonic() + 1.5
@@ -87,12 +88,12 @@ def main():
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
-            if find_named(app, "4-7-8 深い落ち着き", "button"):
+            if find_named(app, "開始", "button"):
                 break
             time.sleep(0.1)
-        assert find_named(app, "4-7-8 深い落ち着き", "button"), "countdown stop did not return home"
+        assert find_named(app, "開始", "button"), "countdown stop did not return home"
 
-        invoke(find_named(app, "4-7-8 深い落ち着き", "button")[0])
+        invoke(find_named(app, "開始", "button")[0])
 
         deadline = time.monotonic() + 4
         while time.monotonic() < deadline:
@@ -108,10 +109,10 @@ def main():
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
-            if find_named(app, "4-7-8 深い落ち着き", "button"):
+            if find_named(app, "開始", "button"):
                 break
             time.sleep(0.1)
-        assert find_named(app, "4-7-8 深い落ち着き", "button"), "stop did not return home"
+        assert find_named(app, "開始", "button"), "stop did not return home"
         print("PASS: home, countdown, and session controls are exposed via AT-SPI")
         return 0
     finally:

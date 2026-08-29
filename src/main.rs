@@ -32,34 +32,30 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
         tr("呼吸に意識を向けましょう", "Focus on your breathing"),
     )));
 
-    let list = gtk::ListBox::new();
-    list.add_css_class("boxed-list");
-    for id in PresetId::ALL {
-        let preset = preset_by_id(id);
-        let row = adw::ActionRow::builder()
-            .title(preset_name(id))
-            .subtitle(format!(
-                "{}  ·  {}",
-                preset_description(id),
-                format_steps(preset.steps)
-            ))
-            .build();
-        let start = gtk::Button::with_label(tr("開始", "Start"));
-        start.add_css_class("suggested-action");
-        let window = window.clone();
-        let settings = settings.clone();
-        start.connect_clicked(move |_| show_session(&window, &settings, id));
-        row.add_suffix(&start);
-        row.set_activatable_widget(Some(&start));
-        list.append(&row);
-    }
+    let selected = selected_preset(settings);
+    let selected_summary = adw::ActionRow::builder()
+        .title(preset_name(selected))
+        .subtitle(format!(
+            "{}  ·  {}",
+            preset_description(selected),
+            format_steps(preset_by_id(selected).steps)
+        ))
+        .build();
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
     content.set_margin_top(24);
     content.set_margin_bottom(24);
     content.set_margin_start(24);
     content.set_margin_end(24);
-    content.append(&list);
+    content.append(&selected_summary);
+
+    let start = gtk::Button::with_label(tr("開始", "Start"));
+    start.add_css_class("suggested-action");
+    start.set_halign(gtk::Align::Start);
+    let window_for_start = window.clone();
+    let settings_for_start = settings.clone();
+    start.connect_clicked(move |_| show_session(&window_for_start, &settings_for_start, selected));
+    content.append(&start);
 
     let duration = gtk::Label::new(Some(&format_session_summary(session_length(settings))));
     duration.add_css_class("dim-label");
@@ -312,6 +308,10 @@ fn session_length(settings: &gtk::gio::Settings) -> SessionLength {
     )
 }
 
+fn selected_preset(settings: &gtk::gio::Settings) -> PresetId {
+    PresetId::from_key(settings.string("preset-id").as_str())
+}
+
 fn format_session_length(length: SessionLength) -> String {
     match length.minutes() {
         0 => tr("無制限", "Unlimited").to_string(),
@@ -323,6 +323,35 @@ fn format_session_length(length: SessionLength) -> String {
 fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     let dialog = adw::PreferencesDialog::new();
     let page = adw::PreferencesPage::new();
+    let preset_group = adw::PreferencesGroup::new();
+    preset_group.set_title(tr("呼吸法", "Breathing pattern"));
+    let selected = selected_preset(settings);
+    let mut group_button = None;
+    for (index, id) in PresetId::ALL.into_iter().enumerate() {
+        let row = adw::ActionRow::builder()
+            .title(preset_name(id))
+            .subtitle(preset_details(id))
+            .build();
+        let button = gtk::CheckButton::new();
+        if let Some(group_button) = group_button.as_ref() {
+            button.set_group(Some(group_button));
+        } else {
+            group_button = Some(button.clone());
+        }
+        button.set_active(id == selected);
+        let settings_for_preset = settings.clone();
+        button.connect_toggled(move |button| {
+            if button.is_active() {
+                let id = PresetId::ALL[index];
+                let _ = settings_for_preset.set_string("preset-id", id.key());
+            }
+        });
+        row.add_suffix(&button);
+        row.set_activatable_widget(Some(&button));
+        preset_group.add(&row);
+    }
+    page.add(&preset_group);
+
     let group = adw::PreferencesGroup::new();
     group.set_title(tr("セッション", "Session"));
 
@@ -470,6 +499,15 @@ fn preset_description(id: PresetId) -> &'static str {
     }
 }
 
+fn preset_details(id: PresetId) -> String {
+    let preset = preset_by_id(id);
+    format!(
+        "{}  ·  {}",
+        preset_description(id),
+        format_steps(preset.steps)
+    )
+}
+
 fn step_name(step: StepKind) -> &'static str {
     match step {
         StepKind::Inhale => tr("吸う", "Inhale"),
@@ -561,5 +599,15 @@ mod tests {
             guide_scale(StepKind::HoldAfterInhale, 0.5),
             guide_scale(StepKind::HoldAfterExhale, 0.5)
         );
+    }
+
+    #[test]
+    fn preset_options_include_description_and_phase_durations() {
+        let label = preset_details(PresetId::Pranayama);
+
+        assert!(label.contains(preset_description(PresetId::Pranayama)));
+        assert!(label.contains("7"));
+        assert!(label.contains("4"));
+        assert!(label.contains("8"));
     }
 }

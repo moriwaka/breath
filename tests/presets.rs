@@ -47,3 +47,11 @@ fn every_breathly_preset_is_available() {
     );
     assert_eq!(preset_by_id(PresetId::Ujjayi).steps, [7_000, 0, 7_000, 0]);
 }
+
+#[test]
+fn preset_keys_round_trip_and_unknown_keys_use_the_default() {
+    for id in PresetId::ALL {
+        assert_eq!(PresetId::from_key(id.key()), id);
+    }
+    assert_eq!(PresetId::from_key("unknown"), PresetId::DeepCalm);
+}

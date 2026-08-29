@@ -54,7 +54,7 @@ def main():
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        assert find_named(app, "4-7-8 Deep Calm", "button"), "English preset name is missing"
+        assert find_named(app, "4-7-8 Deep Calm"), "English preset name is missing"
         preferences = find_named(app, "Preferences", "button")
         assert preferences, "English Preferences action is missing"
         invoke(preferences[0])
@@ -63,13 +63,19 @@ def main():
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
             names = {node.name for node in walk(app) if node.name}
-            if {"Session", "Session length (minutes)", "Guidance audio"} <= names:
+            if {"Breathing pattern", "Session", "Guidance audio"} <= names:
                 break
             time.sleep(0.1)
         names = {node.name for node in walk(app) if node.name}
+        assert "Breathing pattern" in names, "English breathing pattern group is missing"
         assert "Session" in names, "English settings group is missing"
-        assert "Session length (minutes)" in names, "English duration control is missing"
         assert "Guidance audio" in names, "English audio control is missing"
+        assert "Calm your nervous system slowly  ·  4s / 7s / 8s" in names, (
+            "English preset details are missing"
+        )
+        assert "A foundational yoga breathing practice  ·  7s / 4s / 8s / 4s" in names, (
+            "English long-form preset details are missing"
+        )
         print("PASS: English locale names and settings controls are exposed via AT-SPI")
         return 0
     finally:

@@ -46,17 +46,25 @@ def main():
 
     command = sys.argv[1:] or ["breath"]
     environment = os.environ.copy()
-    environment["BREATH_AUDIO_DIR"] = os.path.join("work", "missing-audio")
+    environment.update(
+        {
+            "BREATH_AUDIO_DIR": os.path.join("work", "missing-audio"),
+            "LANGUAGE": "ja",
+            "LC_ALL": "C",
+            "LC_MESSAGES": "C",
+            "LANG": "C",
+        }
+    )
     if command[0].endswith("/breath") and command[0] != "breath":
         environment["GSETTINGS_SCHEMA_DIR"] = "work/gsettings"
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        preset = find_named(app, "4-7-8 深い落ち着き", "button")
-        if not preset:
-            preset = find_named(app, "4-7-8 Deep Calm", "button")
-        assert preset, "preset action is missing"
-        invoke(preset[0])
+        starts = find_named(app, "開始", "button")
+        if not starts:
+            starts = find_named(app, "Start", "button")
+        assert starts, "start action is missing"
+        invoke(starts[0])
 
         warning = (
             "音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください."
