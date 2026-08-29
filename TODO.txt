@@ -6,7 +6,7 @@ Breath remaining work
 - [x] Create the GitHub repository and push the reviewed source history.
 - [x] Complete a clean Fedora RPM build with the vendored Cargo dependencies.
 - [x] Install the generated RPM and verify that the application launches.
-- [ ] Verify audio playback, screen transitions, countdown, pause, resume, stop,
+- [x] Verify audio playback, screen transitions, countdown, pause, resume, stop,
       and back navigation on a real GNOME desktop.
 - [x] Add AT-SPI UI smoke tests for the countdown, controls, and
       screen transitions.
