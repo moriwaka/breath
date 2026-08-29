@@ -80,10 +80,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
           mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
           tar --exclude=.git --exclude=target --exclude=work --sort=name \
-            --transform='s,^\./,breath-0.4.0/,' \
-            -czf work/rpmbuild/SOURCES/breath-0.4.0.tar.gz .
+            --transform="s,^\./,breath-${version}/," \
+            -czf "work/rpmbuild/SOURCES/breath-${version}.tar.gz" .
           rpmbuild -ba breath.spec \
             --define "_topdir $GITHUB_WORKSPACE/work/rpmbuild" \
             --define "_sourcedir $GITHUB_WORKSPACE/work/rpmbuild/SOURCES" \
