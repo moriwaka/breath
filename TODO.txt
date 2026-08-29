@@ -40,8 +40,8 @@ Breath remaining work
 
 - [x] Add a concise man page for the `breath` command to remove the RPM lint
       warning.
-- [ ] Add screenshot-based UI regression tests.
-- [ ] Add translations beyond the current Japanese UI and English metadata.
+- [x] Add GNOME screenshot-based UI regression tests.
+- [x] Add English UI translations alongside the Japanese UI and English metadata.
 - [x] Prepare release versioning and a user-facing changelog.
 - [x] Review the SPEC file for Fedora repository submission requirements.
 - [x] Add CI coverage for offline Rust tests, metadata validation, RPM lint, and

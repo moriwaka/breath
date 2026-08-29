@@ -29,7 +29,7 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
         "Breath",
-        "呼吸に意識を向けましょう",
+        tr("呼吸に意識を向けましょう", "Focus on your breathing"),
     )));
 
     let list = gtk::ListBox::new();
@@ -37,14 +37,14 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     for id in PresetId::ALL {
         let preset = preset_by_id(id);
         let row = adw::ActionRow::builder()
-            .title(japanese_name(id))
+            .title(preset_name(id))
             .subtitle(format!(
                 "{}  ·  {}",
-                japanese_description(id),
+                preset_description(id),
                 format_steps(preset.steps)
             ))
             .build();
-        let start = gtk::Button::with_label("開始");
+        let start = gtk::Button::with_label(tr("開始", "Start"));
         start.add_css_class("suggested-action");
         let window = window.clone();
         let settings = settings.clone();
@@ -61,15 +61,12 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     content.set_margin_end(24);
     content.append(&list);
 
-    let duration = gtk::Label::new(Some(&format!(
-        "セッション時間: {}（設定は次回起動時に保存されます）",
-        format_session_length(session_length(settings))
-    )));
+    let duration = gtk::Label::new(Some(&format_session_summary(session_length(settings))));
     duration.add_css_class("dim-label");
     duration.set_halign(gtk::Align::Start);
     content.append(&duration);
 
-    let preferences = gtk::Button::with_label("設定");
+    let preferences = gtk::Button::with_label(tr("設定", "Preferences"));
     preferences.set_halign(gtk::Align::Start);
     let window_for_preferences = window.clone();
     let settings_for_preferences = settings.clone();
@@ -100,14 +97,14 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         3_000,
     )));
     let audio = Rc::new(AudioPlayer::default());
-    let phase = gtk::Label::new(Some("吸う"));
+    let phase = gtk::Label::new(Some(tr("吸う", "Inhale")));
     phase.add_css_class("title-1");
     let remaining = gtk::Label::new(None);
     remaining.add_css_class("title-2");
     remaining.set_visible(false);
     let countdown = gtk::Label::new(Some("3"));
     countdown.add_css_class("title-1");
-    let hint = gtk::Label::new(Some("準備しましょう"));
+    let hint = gtk::Label::new(Some(tr("準備しましょう", "Get ready")));
     hint.add_css_class("dim-label");
     hint.set_wrap(true);
     let audio_warning = gtk::Label::new(None);
@@ -153,9 +150,9 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         let _ = cr.fill();
     });
 
-    let pause = gtk::Button::with_label("一時停止");
+    let pause = gtk::Button::with_label(tr("一時停止", "Pause"));
     pause.set_sensitive(false);
-    let stop = gtk::Button::with_label("停止");
+    let stop = gtk::Button::with_label(tr("停止", "Stop"));
     stop.add_css_class("destructive-action");
     let controls = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     controls.set_halign(gtk::Align::Center);
@@ -169,7 +166,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     content.set_margin_end(24);
     content.set_valign(gtk::Align::Center);
     content.set_halign(gtk::Align::Center);
-    let name = gtk::Label::new(Some(japanese_name(id)));
+    let name = gtk::Label::new(Some(preset_name(id)));
     name.add_css_class("title-2");
     content.append(&name);
     content.append(&guide);
@@ -180,9 +177,9 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     content.append(&remaining);
     content.append(&controls);
     let header = adw::HeaderBar::new();
-    header.set_title_widget(Some(&adw::WindowTitle::new("Breath", japanese_name(id))));
+    header.set_title_widget(Some(&adw::WindowTitle::new("Breath", preset_name(id))));
     let back = gtk::Button::from_icon_name("go-previous-symbolic");
-    back.set_tooltip_text(Some("ホームに戻る"));
+    back.set_tooltip_text(Some(tr("ホームに戻る", "Back to home")));
     header.pack_start(&back);
     let clamp = adw::Clamp::builder()
         .maximum_size(680)
@@ -215,21 +212,21 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Countdown {
             timer_countdown.set_visible(true);
             timer_remaining.set_visible(false);
-            timer_phase.set_label("準備");
-            timer_hint.set_label("まもなく開始します");
+            timer_phase.set_label(tr("準備", "Get ready"));
+            timer_hint.set_label(tr("まもなく開始します", "Starting soon"));
             timer_countdown.set_label(&format_countdown(current.countdown_remaining_ms()));
         } else if let Some((kind, _)) = current.current_step() {
             timer_countdown.set_visible(false);
             timer_remaining.set_visible(true);
             timer_pause.set_sensitive(true);
-            timer_phase.set_label(japanese_step(kind));
-            timer_hint.set_label(japanese_hint(kind));
+            timer_phase.set_label(step_name(kind));
+            timer_hint.set_label(step_hint(kind));
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
             *timer_kind.borrow_mut() = kind;
             if announced_step != Some(kind) {
                 if !play_step_cue(&timer_audio, &timer_settings, kind) {
                     timer_audio_warning.set_label(
-                        "音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。",
+                        tr("音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください.", "Audio could not be played. Check the audio file or GStreamer decoder."),
                     );
                     timer_audio_warning.set_visible(true);
                 }
@@ -239,11 +236,11 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         timer_remaining.set_label(&format_remaining(current.session_remaining_ms()));
         timer_guide.queue_draw();
         if current.status() == SessionStatus::Completed {
-            timer_phase.set_label("完了しました");
+            timer_phase.set_label(tr("完了しました", "Complete"));
             let mode = AudioMode::from_key(timer_settings.string("audio-mode").as_str());
             if mode.plays_completion_cue() && !timer_audio.play("endingbell1.mp3") {
                 timer_audio_warning.set_label(
-                    "完了音を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。",
+                    tr("完了音を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。", "The completion sound could not be played. Check the audio file or GStreamer decoder."),
                 );
                 timer_audio_warning.set_visible(true);
             }
@@ -257,10 +254,10 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         let mut current = pause_session.borrow_mut();
         if current.status() == SessionStatus::Running {
             current.pause();
-            button.set_label("再開");
+            button.set_label(tr("再開", "Resume"));
         } else if current.status() == SessionStatus::Paused {
             current.resume();
-            button.set_label("一時停止");
+            button.set_label(tr("一時停止", "Pause"));
         }
     });
     let stop_session = session.clone();
@@ -312,8 +309,9 @@ fn session_length(settings: &gtk::gio::Settings) -> SessionLength {
 
 fn format_session_length(length: SessionLength) -> String {
     match length.minutes() {
-        0 => "無制限".to_string(),
-        minutes => format!("{minutes} 分"),
+        0 => tr("無制限", "Unlimited").to_string(),
+        minutes if !is_english() => format!("{minutes} 分"),
+        minutes => format!("{minutes} min"),
     }
 }
 
@@ -321,12 +319,12 @@ fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settin
     let dialog = adw::PreferencesDialog::new();
     let page = adw::PreferencesPage::new();
     let group = adw::PreferencesGroup::new();
-    group.set_title("セッション");
+    group.set_title(tr("セッション", "Session"));
 
     let duration = adw::SpinRow::with_range(0.0, f64::from(SessionLength::MAX_MINUTES), 1.0);
-    duration.set_title("セッション時間（分）");
+    duration.set_title(tr("セッション時間（分）", "Session length (minutes)"));
     duration.set_value(f64::from(session_length(settings).minutes()));
-    duration.set_subtitle("0 分は無制限です");
+    duration.set_subtitle(tr("0 分は無制限です", "0 means unlimited"));
     let settings_for_duration = settings.clone();
     duration.connect_value_notify(move |row| {
         let minutes = row
@@ -338,9 +336,12 @@ fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settin
     group.add(&duration);
 
     let voice = adw::ComboRow::new();
-    voice.set_title("ガイド音声");
+    voice.set_title(tr("ガイド音声", "Guidance audio"));
     voice.set_model(Some(&gtk::StringList::new(&[
-        "Paul", "Laura", "ベル", "オフ",
+        "Paul",
+        "Laura",
+        tr("ベル", "Bell"),
+        tr("オフ", "Off"),
     ])));
     voice.set_selected(audio_mode_index(AudioMode::from_key(
         settings.string("audio-mode").as_str(),
@@ -427,36 +428,45 @@ fn audio_path(asset: &str) -> PathBuf {
     }
 }
 
-fn japanese_name(id: PresetId) -> &'static str {
+fn preset_name(id: PresetId) -> &'static str {
     match id {
-        PresetId::DeepCalm => "4-7-8 深い落ち着き",
-        PresetId::Awake => "目覚め",
-        PresetId::Coherent => "コヒーレント呼吸",
-        PresetId::ExtendedExhale => "長い呼気",
-        PresetId::Pranayama => "プラーナヤーマ",
-        PresetId::Square => "スクエア呼吸",
-        PresetId::Ujjayi => "ウジャイ呼吸",
+        PresetId::DeepCalm => tr("4-7-8 深い落ち着き", "4-7-8 Deep Calm"),
+        PresetId::Awake => tr("目覚め", "Awake"),
+        PresetId::Coherent => tr("コヒーレント呼吸", "Coherent Breathing"),
+        PresetId::ExtendedExhale => tr("長い呼気", "Extended Exhale"),
+        PresetId::Pranayama => tr("プラーナヤーマ", "Pranayama"),
+        PresetId::Square => tr("スクエア呼吸", "Square Breathing"),
+        PresetId::Ujjayi => tr("ウジャイ呼吸", "Ujjayi"),
     }
 }
 
-fn japanese_description(id: PresetId) -> &'static str {
+fn preset_description(id: PresetId) -> &'static str {
     match id {
-        PresetId::DeepCalm => "ゆっくりと神経を落ち着かせます",
-        PresetId::Awake => "朝の目覚めと集中に",
-        PresetId::Coherent => "等しいリズムで整えます",
-        PresetId::ExtendedExhale => "短時間で落ち着きたいときに",
-        PresetId::Pranayama => "ヨガの基本的な呼吸法です",
-        PresetId::Square => "一定のリズムで呼吸します",
-        PresetId::Ujjayi => "心身のバランスを整えます",
+        PresetId::DeepCalm => tr(
+            "ゆっくりと神経を落ち着かせます",
+            "Calm your nervous system slowly",
+        ),
+        PresetId::Awake => tr("朝の目覚めと集中に", "For morning energy and focus"),
+        PresetId::Coherent => tr("等しいリズムで整えます", "Find balance with an even rhythm"),
+        PresetId::ExtendedExhale => tr(
+            "短時間で落ち着きたいときに",
+            "Settle down in a short session",
+        ),
+        PresetId::Pranayama => tr(
+            "ヨガの基本的な呼吸法です",
+            "A foundational yoga breathing practice",
+        ),
+        PresetId::Square => tr("一定のリズムで呼吸します", "Breathe in a steady rhythm"),
+        PresetId::Ujjayi => tr("心身のバランスを整えます", "Balance body and mind"),
     }
 }
 
-fn japanese_step(step: StepKind) -> &'static str {
+fn step_name(step: StepKind) -> &'static str {
     match step {
-        StepKind::Inhale => "吸う",
-        StepKind::HoldAfterInhale => "止める",
-        StepKind::Exhale => "吐く",
-        StepKind::HoldAfterExhale => "止める",
+        StepKind::Inhale => tr("吸う", "Inhale"),
+        StepKind::HoldAfterInhale => tr("止める", "Hold"),
+        StepKind::Exhale => tr("吐く", "Exhale"),
+        StepKind::HoldAfterExhale => tr("止める", "Hold"),
     }
 }
 
@@ -464,31 +474,70 @@ fn format_steps(steps: [u32; 4]) -> String {
     steps
         .into_iter()
         .filter(|value| *value > 0)
-        .map(|value| format!("{}秒", value / 1_000))
+        .map(|value| {
+            if !is_english() {
+                format!("{}秒", value / 1_000)
+            } else {
+                format!("{}s", value / 1_000)
+            }
+        })
         .collect::<Vec<_>>()
         .join(" / ")
 }
 
 fn format_remaining(remaining: Option<u32>) -> String {
     match remaining {
-        Some(milliseconds) => format!(
-            "残り {}:{:02}",
-            milliseconds / 60_000,
-            (milliseconds / 1_000) % 60
-        ),
-        None => "無制限セッション".to_string(),
+        Some(milliseconds) => {
+            let value = format!(
+                "{}:{:02}",
+                milliseconds / 60_000,
+                (milliseconds / 1_000) % 60
+            );
+            if !is_english() {
+                format!("残り {value}")
+            } else {
+                format!("{value} remaining")
+            }
+        }
+        None => tr("無制限セッション", "Unlimited session").to_string(),
     }
 }
 
 fn format_countdown(remaining: Option<u32>) -> String {
     let seconds = remaining.unwrap_or(0).div_ceil(1_000);
-    format!("開始まで {seconds}")
+    if !is_english() {
+        format!("開始まで {seconds}")
+    } else {
+        format!("Starts in {seconds}")
+    }
 }
 
-fn japanese_hint(step: StepKind) -> &'static str {
+fn step_hint(step: StepKind) -> &'static str {
     match step {
-        StepKind::Inhale => "ゆっくり大きく",
-        StepKind::Exhale => "ゆっくり小さく",
-        StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => "そのまま保ちます",
+        StepKind::Inhale => tr("ゆっくり大きく", "Slow and deep"),
+        StepKind::Exhale => tr("ゆっくり小さく", "Slow and gentle"),
+        StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => {
+            tr("そのまま保ちます", "Stay still")
+        }
     }
+}
+
+fn format_session_summary(length: SessionLength) -> String {
+    let formatted = format_session_length(length);
+    if !is_english() {
+        format!("セッション時間: {formatted}（設定は次回起動時に保存されます）")
+    } else {
+        format!("Session length: {formatted} (saved for the next launch)")
+    }
+}
+
+fn is_english() -> bool {
+    ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"]
+        .into_iter()
+        .filter_map(|key| std::env::var(key).ok())
+        .any(|value| value.split(':').any(|locale| locale.starts_with("en")))
+}
+
+fn tr(japanese: &'static str, english: &'static str) -> &'static str {
+    if is_english() { english } else { japanese }
 }

@@ -25,6 +25,11 @@
 - Run `cargo clippy --all-targets --offline -- -D warnings` when Clippy is installed; Fedora CI runs the same check.
 - For a release build, run `cargo build --release --offline`.
 - Validate desktop integration with `desktop-file-validate data/io.github.moriwaka.Breath.desktop` and `appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml`.
+- The UI uses Japanese by default and shows English when a locale beginning
+  with `en` is present in `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, or `LANG`.
+- Run `python3 tests/screenshot_regression.py` in a GNOME session with
+  `gnome-screenshot` installed for native screen captures; it exits 77 when
+  the capture utility is unavailable.
 - Do not add web UI dependencies or remote runtime assets.
 
 ## Versioning
@@ -46,8 +51,8 @@
   ```sh
   mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
   tar --exclude=.git --exclude=target --exclude=work --sort=name \
-    --transform='s,^\\./,breath-0.2.0/,' \
-    -czf work/rpmbuild/SOURCES/breath-0.2.0.tar.gz .
+    --transform='s,^\\./,breath-0.3.0/,' \
+    -czf work/rpmbuild/SOURCES/breath-0.3.0.tar.gz .
   rpmbuild -ba breath.spec \
     --define '_topdir %{getenv:PWD}/work/rpmbuild' \
     --define '_sourcedir %{getenv:PWD}/work/rpmbuild/SOURCES' \

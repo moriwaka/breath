@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Added English UI translations, selected automatically for English locales.
+- Added a Wayland screenshot regression test harness.
+
 ## 0.2.0
 
 - Show a user-visible warning when guidance audio cannot be played.
