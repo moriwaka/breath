@@ -149,6 +149,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     });
 
     let pause = gtk::Button::with_label("一時停止");
+    pause.set_sensitive(false);
     let stop = gtk::Button::with_label("停止");
     stop.add_css_class("destructive-action");
     let controls = gtk::Box::new(gtk::Orientation::Horizontal, 12);
@@ -189,6 +190,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let timer_session = session.clone();
     let timer_phase = phase.clone();
     let timer_hint = hint.clone();
+    let timer_pause = pause.clone();
     let timer_remaining = remaining.clone();
     let timer_countdown = countdown.clone();
     let timer_guide = guide.clone();
@@ -212,6 +214,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         } else if let Some((kind, _)) = current.current_step() {
             timer_countdown.set_visible(false);
             timer_remaining.set_visible(true);
+            timer_pause.set_sensitive(true);
             timer_phase.set_label(japanese_step(kind));
             timer_hint.set_label(japanese_hint(kind));
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);

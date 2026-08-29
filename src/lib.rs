@@ -283,7 +283,10 @@ impl Session {
     }
 
     pub fn stop(&mut self) {
-        if self.status == SessionStatus::Running || self.status == SessionStatus::Paused {
+        if self.status == SessionStatus::Countdown
+            || self.status == SessionStatus::Running
+            || self.status == SessionStatus::Paused
+        {
             self.status = SessionStatus::Stopped;
         }
     }

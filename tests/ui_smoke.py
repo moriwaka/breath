@@ -81,6 +81,19 @@ def main():
             time.sleep(0.1)
         assert "3" in seen, f"countdown start not observed: {seen}"
 
+        countdown_stops = find_named(app, "停止", "button")
+        assert countdown_stops, "countdown has no stop button"
+        invoke(countdown_stops[0])
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            app = wait_for_application(timeout=1)
+            if find_named(app, "4-7-8 深い落ち着き", "button"):
+                break
+            time.sleep(0.1)
+        assert find_named(app, "4-7-8 深い落ち着き", "button"), "countdown stop did not return home"
+
+        invoke(find_named(app, "4-7-8 深い落ち着き", "button")[0])
+
         deadline = time.monotonic() + 4
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)

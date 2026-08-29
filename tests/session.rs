@@ -106,3 +106,13 @@ fn countdown_session_waits_before_starting_breathing() {
     assert_eq!(session.status(), SessionStatus::Running);
     assert_eq!(session.current_step(), Some((StepKind::Inhale, 6_000)));
 }
+
+#[test]
+fn countdown_session_can_be_stopped_before_breathing_starts() {
+    let mut session = Session::start_countdown(preset_by_id(PresetId::Awake), None, 3_000);
+
+    session.stop();
+
+    assert_eq!(session.status(), SessionStatus::Stopped);
+    assert_eq!(session.countdown_remaining_ms(), Some(3_000));
+}

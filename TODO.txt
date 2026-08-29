@@ -15,12 +15,12 @@ Breath remaining work
 
 - [ ] Verify keyboard navigation, focus order, accessible labels, high-DPI
       rendering, small windows, and dark theme behavior.
-- [ ] Verify stopping or going back during the countdown behaves correctly.
+- [x] Verify stopping or going back during the countdown behaves correctly.
 - [x] Add a README with build, development, and Fedora installation instructions.
 
 [Low priority]
 
 - [ ] Add screenshot-based UI regression tests.
 - [ ] Add translations beyond the current Japanese UI and English metadata.
-- [ ] Prepare release versioning and a user-facing changelog.
+- [x] Prepare release versioning and a user-facing changelog.
 - [ ] Review the SPEC file for Fedora repository submission requirements.
