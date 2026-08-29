@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Install build and validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            appstream \
+            desktop-file-utils \
+            libadwaita-1-dev \
+            libgstreamer1.0-dev \
+            libgtk-4-dev \
+            pkg-config \
+            rpm \
+            rpmlint
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run offline Rust tests
+        run: cargo test --offline
+
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate data/io.github.moriwaka.Breath.desktop
+          appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
+
+      - name: Check non-display UI smoke test
+        shell: bash
+        run: |
+          python3 -m py_compile tests/ui_smoke.py
+          set +e
+          python3 tests/ui_smoke.py
+          status=$?
+          set -e
+          test "$status" -eq 0 -o "$status" -eq 77
+
+      - name: Build and lint Fedora RPM
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
+          tar --exclude=.git --exclude=target --exclude=work --sort=name \
+            --transform='s,^\\.,breath-0.1.0,' \
+            -czf work/rpmbuild/SOURCES/breath-0.1.0.tar.gz .
+          rpmbuild -ba breath.spec \
+            --define "_topdir $GITHUB_WORKSPACE/work/rpmbuild" \
+            --define "_sourcedir $GITHUB_WORKSPACE/work/rpmbuild/SOURCES" \
+            --define "_tmppath $GITHUB_WORKSPACE/work/rpmbuild/TMP"
+          rpmlint work/rpmbuild/RPMS/x86_64/*.rpm

@@ -32,5 +32,5 @@ Breath remaining work
 - [ ] Add translations beyond the current Japanese UI and English metadata.
 - [x] Prepare release versioning and a user-facing changelog.
 - [x] Review the SPEC file for Fedora repository submission requirements.
-- [ ] Add CI coverage for offline Rust tests, metadata validation, RPM lint, and
+- [x] Add CI coverage for offline Rust tests, metadata validation, RPM lint, and
       the non-display UI smoke-test checks.
