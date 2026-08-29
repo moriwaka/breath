@@ -15,12 +15,14 @@
 - `data/`: desktop entry, GSettings schema, AppStream metadata, and the 512px application icon.
 - `assets/audio/`: bundled MP3 guidance and completion cues.
 - `breath.spec`: Fedora RPM build and file manifest.
+- `.github/workflows/ci.yml`: Fedora-container CI for Rust, metadata, and RPM checks.
 - `vendor/` plus `.cargo/config.toml`: offline Cargo dependency source used by reproducible package builds.
 
 ## Development workflow
 
 - Use Red → Green → Refactor for behavior changes: add a failing test, implement the smallest fix, then refactor only with tests green.
 - Keep changes incremental and focused. Run `cargo fmt -- --check` and `cargo test --offline` after code changes.
+- Run `cargo clippy --all-targets --offline -- -D warnings` when Clippy is installed; Fedora CI runs the same check.
 - For a release build, run `cargo build --release --offline`.
 - Validate desktop integration with `desktop-file-validate data/io.github.moriwaka.Breath.desktop` and `appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml`.
 - Do not add web UI dependencies or remote runtime assets.
@@ -37,6 +39,8 @@
 
 - Use `./work/` for all temporary files, source archives, RPM build trees, logs, and generated package artifacts. Do not use `/tmp` or `/var/tmp` for project work.
 - `work/` is intentionally ignored by Git. Keep generated files there and never commit them.
+- `.gitattributes` preserves CRLF for two vendored fixture files whose recorded
+  Cargo checksums depend on those line endings; do not normalize those files.
 - Build an offline RPM from the repository root with a vendored source archive. The archive must include `vendor/` and `.cargo/config.toml`:
 
   ```sh
@@ -61,6 +65,8 @@
   and verify the command that justifies the milestone actually passed.
 - Do not delete or reset user files. Ignore unrelated generated files.
 - Before reporting success, verify the final command for that claim actually passed.
+- Batch local changes and verify them before pushing. A local commit may remain
+  ahead of `origin/main` while investigation is still in progress.
 
 ## Verified milestone
 
