@@ -1,4 +1,4 @@
-use breath::{AudioMode, SessionLength};
+use breath::{AudioMode, SessionLength, StepKind};
 
 #[test]
 fn default_session_length_is_five_minutes() {
@@ -21,4 +21,21 @@ fn paul_is_the_default_guidance_voice() {
     assert_eq!(AudioMode::default(), AudioMode::Paul);
     assert_eq!(AudioMode::from_key("bell"), AudioMode::Bell);
     assert_eq!(AudioMode::from_key("unknown"), AudioMode::Paul);
+}
+
+#[test]
+fn audio_modes_resolve_the_correct_phase_cues() {
+    assert_eq!(
+        AudioMode::Paul.asset_for_step(StepKind::Inhale),
+        Some("paulinhale.mp3")
+    );
+    assert_eq!(
+        AudioMode::Laura.asset_for_step(StepKind::HoldAfterInhale),
+        Some("laurahold.mp3")
+    );
+    assert_eq!(
+        AudioMode::Bell.asset_for_step(StepKind::Exhale),
+        Some("cuebell2.mp3")
+    );
+    assert_eq!(AudioMode::Off.asset_for_step(StepKind::Exhale), None);
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="io.github.moriwaka.Breath" path="/io/github/moriwaka/Breath/">
+    <key name="session-minutes" type="u"><default>5</default></key>
+    <key name="audio-mode" type="s"><default>'paul'</default></key>
+  </schema>
+</schemalist>

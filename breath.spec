@@ -6,7 +6,7 @@ License:        MPL-2.0
 URL:            https://github.com/mmazzarolo/breathly-app
 Source0:        %{name}-%{version}.tar.gz
 
-BuildRequires:  cargo-rpm-macros
+BuildRequires:  cargo
 BuildRequires:  desktop-file-utils
 BuildRequires:  gtk4-devel
 BuildRequires:  libadwaita-devel
@@ -20,27 +20,29 @@ Breath is a native GNOME application for guided breathing exercises.
 %autosetup
 
 %build
-%cargo_build
+CARGO_TARGET_DIR=%{_builddir}/breath-cargo-target cargo build --release --offline
 
 %install
-install -Dpm0755 target/release/breath %{buildroot}%{_bindir}/breath
+install -Dpm0755 %{_builddir}/breath-cargo-target/release/breath %{buildroot}%{_bindir}/breath
 install -Dpm0644 data/io.github.moriwaka.Breath.desktop %{buildroot}%{_datadir}/applications/io.github.moriwaka.Breath.desktop
 install -Dpm0644 data/io.github.moriwaka.Breath.metainfo.xml %{buildroot}%{_metainfodir}/io.github.moriwaka.Breath.metainfo.xml
+install -Dpm0644 data/io.github.moriwaka.Breath.gschema.xml %{buildroot}%{_datadir}/glib-2.0/schemas/io.github.moriwaka.Breath.gschema.xml
 install -Dpm0644 data/icons/hicolor/512x512/apps/io.github.moriwaka.Breath.png %{buildroot}%{_datadir}/icons/hicolor/512x512/apps/io.github.moriwaka.Breath.png
 install -d %{buildroot}%{_datadir}/breath/audio
 install -pm0644 assets/audio/*.mp3 %{buildroot}%{_datadir}/breath/audio/
 install -Dpm0644 THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt %{buildroot}%{_datadir}/licenses/%{name}/Breathly-MPL-2.0.txt
 
 %check
-%cargo_test
+CARGO_TARGET_DIR=%{_builddir}/breath-cargo-target cargo test --offline
 desktop-file-validate data/io.github.moriwaka.Breath.desktop
-appstreamcli validate data/io.github.moriwaka.Breath.metainfo.xml
+appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 
 %files
 %license THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt
 %{_bindir}/breath
 %{_datadir}/applications/io.github.moriwaka.Breath.desktop
 %{_metainfodir}/io.github.moriwaka.Breath.metainfo.xml
+%{_datadir}/glib-2.0/schemas/io.github.moriwaka.Breath.gschema.xml
 %{_datadir}/icons/hicolor/512x512/apps/io.github.moriwaka.Breath.png
 %{_datadir}/breath/audio/
 

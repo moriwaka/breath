@@ -167,6 +167,26 @@ impl AudioMode {
             Self::Off => "off",
         }
     }
+
+    /// Returns the bundled audio asset that announces a breathing phase.
+    /// `None` deliberately represents silent guidance.
+    pub fn asset_for_step(self, step: StepKind) -> Option<&'static str> {
+        match (self, step) {
+            (Self::Paul, StepKind::Inhale) => Some("paulinhale.mp3"),
+            (Self::Paul, StepKind::HoldAfterInhale | StepKind::HoldAfterExhale) => {
+                Some("paulhold.mp3")
+            }
+            (Self::Paul, StepKind::Exhale) => Some("paulexhale.mp3"),
+            (Self::Laura, StepKind::Inhale) => Some("laurainhale.mp3"),
+            (Self::Laura, StepKind::HoldAfterInhale | StepKind::HoldAfterExhale) => {
+                Some("laurahold.mp3")
+            }
+            (Self::Laura, StepKind::Exhale) => Some("lauraexhale.mp3"),
+            (Self::Bell, StepKind::Inhale | StepKind::HoldAfterExhale) => Some("cuebell1.mp3"),
+            (Self::Bell, StepKind::HoldAfterInhale | StepKind::Exhale) => Some("cuebell2.mp3"),
+            (Self::Off, _) => None,
+        }
+    }
 }
 
 impl Default for AudioMode {

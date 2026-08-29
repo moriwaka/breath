@@ -1,8 +1,10 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, path::PathBuf, rc::Rc, time::Duration};
 
 use adw::prelude::*;
-use breath::{PresetId, Session, SessionLength, SessionStatus, StepKind, preset_by_id};
+use breath::{AudioMode, PresetId, Session, SessionLength, SessionStatus, StepKind, preset_by_id};
+use gst::prelude::*;
 const APP_ID: &str = "io.github.moriwaka.Breath";
+const AUDIO_DIR: &str = "/usr/share/breath/audio";
 
 fn main() {
     gst::init().expect("GStreamer must initialize");
@@ -18,11 +20,12 @@ fn build_home(app: &adw::Application) {
         .default_width(520)
         .default_height(640)
         .build();
-    show_home(&window);
+    let settings = gtk::gio::Settings::new(APP_ID);
+    show_home(&window, &settings);
     window.present();
 }
 
-fn show_home(window: &adw::ApplicationWindow) {
+fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     let header = adw::HeaderBar::new();
     header.set_title_widget(Some(&adw::WindowTitle::new(
         "Breath",
@@ -44,7 +47,8 @@ fn show_home(window: &adw::ApplicationWindow) {
         let start = gtk::Button::with_label("開始");
         start.add_css_class("suggested-action");
         let window = window.clone();
-        start.connect_clicked(move |_| show_session(&window, id));
+        let settings = settings.clone();
+        start.connect_clicked(move |_| show_session(&window, &settings, id));
         row.add_suffix(&start);
         row.set_activatable_widget(Some(&start));
         list.append(&row);
@@ -57,12 +61,22 @@ fn show_home(window: &adw::ApplicationWindow) {
     content.set_margin_end(24);
     content.append(&list);
 
-    let duration = gtk::Label::new(Some(
-        "セッション時間: 5 分（設定は次回起動時に保存されます）",
-    ));
+    let duration = gtk::Label::new(Some(&format!(
+        "セッション時間: {}（設定は次回起動時に保存されます）",
+        format_session_length(session_length(settings))
+    )));
     duration.add_css_class("dim-label");
     duration.set_halign(gtk::Align::Start);
     content.append(&duration);
+
+    let preferences = gtk::Button::with_label("設定");
+    preferences.set_halign(gtk::Align::Start);
+    let window_for_preferences = window.clone();
+    let settings_for_preferences = settings.clone();
+    preferences.connect_clicked(move |_| {
+        show_preferences(&window_for_preferences, &settings_for_preferences)
+    });
+    content.append(&preferences);
 
     let layout = gtk::Box::new(gtk::Orientation::Vertical, 0);
     layout.append(&header);
@@ -70,12 +84,13 @@ fn show_home(window: &adw::ApplicationWindow) {
     window.set_content(Some(&layout));
 }
 
-fn show_session(window: &adw::ApplicationWindow, id: PresetId) {
+fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, id: PresetId) {
     let preset = preset_by_id(id);
     let session = Rc::new(RefCell::new(Session::start(
         preset,
-        SessionLength::default().as_option_ms(),
+        session_length(settings).as_option_ms(),
     )));
+    let audio = Rc::new(AudioPlayer::default());
     let phase = gtk::Label::new(Some("吸う"));
     phase.add_css_class("title-1");
     let remaining = gtk::Label::new(None);
@@ -114,20 +129,35 @@ fn show_session(window: &adw::ApplicationWindow, id: PresetId) {
     content.append(&controls);
     window.set_content(Some(&content));
 
+    if let Some((kind, _)) = session.borrow().current_step() {
+        play_step_cue(&audio, settings, kind);
+    }
+
     let timer_session = session.clone();
     let timer_phase = phase.clone();
     let timer_remaining = remaining.clone();
     let timer_guide = guide.clone();
+    let timer_audio = audio.clone();
+    let timer_settings = settings.clone();
+    let mut announced_step = session.borrow().current_step().map(|(kind, _)| kind);
     gtk::glib::timeout_add_local(Duration::from_millis(100), move || {
         let mut current = timer_session.borrow_mut();
         current.advance(100);
+        if current.status() == SessionStatus::Stopped {
+            return gtk::glib::ControlFlow::Break;
+        }
         if let Some((kind, _)) = current.current_step() {
             timer_phase.set_label(japanese_step(kind));
+            if announced_step != Some(kind) {
+                play_step_cue(&timer_audio, &timer_settings, kind);
+                announced_step = Some(kind);
+            }
         }
         timer_remaining.set_label(&format_remaining(current.session_remaining_ms()));
         timer_guide.queue_draw();
         if current.status() == SessionStatus::Completed {
             timer_phase.set_label("完了しました");
+            timer_audio.play("endingbell1.mp3");
             return gtk::glib::ControlFlow::Break;
         }
         gtk::glib::ControlFlow::Continue
@@ -144,8 +174,134 @@ fn show_session(window: &adw::ApplicationWindow, id: PresetId) {
             button.set_label("一時停止");
         }
     });
+    let stop_session = session.clone();
+    let stop_audio = audio.clone();
     let window_for_stop = window.clone();
-    stop.connect_clicked(move |_| show_home(&window_for_stop));
+    let settings_for_stop = settings.clone();
+    stop.connect_clicked(move |_| {
+        stop_session.borrow_mut().stop();
+        stop_audio.stop();
+        show_home(&window_for_stop, &settings_for_stop);
+    });
+}
+
+fn session_length(settings: &gtk::gio::Settings) -> SessionLength {
+    SessionLength::from_minutes(
+        settings
+            .uint("session-minutes")
+            .min(u32::from(SessionLength::MAX_MINUTES)) as u8,
+    )
+}
+
+fn format_session_length(length: SessionLength) -> String {
+    match length.minutes() {
+        0 => "無制限".to_string(),
+        minutes => format!("{minutes} 分"),
+    }
+}
+
+fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
+    let dialog = adw::PreferencesDialog::new();
+    let page = adw::PreferencesPage::new();
+    let group = adw::PreferencesGroup::new();
+    group.set_title("セッション");
+
+    let duration = adw::SpinRow::with_range(0.0, f64::from(SessionLength::MAX_MINUTES), 1.0);
+    duration.set_title("セッション時間（分）");
+    duration.set_value(f64::from(session_length(settings).minutes()));
+    duration.set_subtitle("0 分は無制限です");
+    let settings_for_duration = settings.clone();
+    duration.connect_value_notify(move |row| {
+        let minutes = row
+            .value()
+            .round()
+            .clamp(0.0, f64::from(SessionLength::MAX_MINUTES));
+        let _ = settings_for_duration.set_uint("session-minutes", minutes as u32);
+    });
+    group.add(&duration);
+
+    let voice = adw::ComboRow::new();
+    voice.set_title("ガイド音声");
+    voice.set_model(Some(&gtk::StringList::new(&[
+        "Paul", "Laura", "ベル", "オフ",
+    ])));
+    voice.set_selected(audio_mode_index(AudioMode::from_key(
+        settings.string("audio-mode").as_str(),
+    )));
+    let settings_for_voice = settings.clone();
+    voice.connect_selected_notify(move |row| {
+        let _ =
+            settings_for_voice.set_string("audio-mode", audio_mode_for_index(row.selected()).key());
+    });
+    group.add(&voice);
+    page.add(&group);
+    dialog.add(&page);
+    dialog.present(Some(window));
+}
+
+fn audio_mode_index(mode: AudioMode) -> u32 {
+    match mode {
+        AudioMode::Paul => 0,
+        AudioMode::Laura => 1,
+        AudioMode::Bell => 2,
+        AudioMode::Off => 3,
+    }
+}
+
+fn audio_mode_for_index(index: u32) -> AudioMode {
+    match index {
+        1 => AudioMode::Laura,
+        2 => AudioMode::Bell,
+        3 => AudioMode::Off,
+        _ => AudioMode::Paul,
+    }
+}
+
+#[derive(Default)]
+struct AudioPlayer {
+    current: RefCell<Option<gst::Element>>,
+}
+
+impl AudioPlayer {
+    fn play(&self, asset: &str) {
+        self.stop();
+        let path = audio_path(asset);
+        if !path.is_file() {
+            return;
+        }
+        let uri = gtk::gio::File::for_path(path).uri();
+        let Ok(player) = gst::ElementFactory::make("playbin")
+            .property_from_str("uri", uri.as_str())
+            .build()
+        else {
+            return;
+        };
+        if player.set_state(gst::State::Playing).is_ok() {
+            self.current.replace(Some(player));
+        }
+    }
+
+    fn stop(&self) {
+        if let Some(player) = self.current.borrow_mut().take() {
+            let _ = player.set_state(gst::State::Null);
+        }
+    }
+}
+
+fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepKind) {
+    if let Some(asset) =
+        AudioMode::from_key(settings.string("audio-mode").as_str()).asset_for_step(step)
+    {
+        audio.play(asset);
+    }
+}
+
+fn audio_path(asset: &str) -> PathBuf {
+    let installed = PathBuf::from(AUDIO_DIR).join(asset);
+    installed
+        .is_file()
+        .then_some(installed)
+        .unwrap_or_else(|| PathBuf::from("assets/audio").join(asset))
 }
 
 fn japanese_name(id: PresetId) -> &'static str {
