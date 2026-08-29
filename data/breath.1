@@ -1,0 +1,26 @@
+.TH BREATH 1 "August 2026" "breath 0.1.0" "User Commands"
+.SH NAME
+breath \- guided breathing exercises for GNOME
+.SH SYNOPSIS
+.B breath
+.SH DESCRIPTION
+.B breath
+is a native GNOME application that guides breathing exercises with visual
+phase animations and optional audio cues. Choose a breathing pattern, set a
+session duration, and follow the inhale, hold, and exhale phases.
+.PP
+A three-second countdown is shown before each session. Sessions can be
+paused, resumed, stopped, or left with the back button or the Escape key.
+.SH FILES
+.TP
+.I /usr/share/breath/audio/
+Bundled voice and bell guidance audio.
+.TP
+.I /usr/share/glib-2.0/schemas/io.github.moriwaka.Breath.gschema.xml
+Application preferences schema.
+.SH SEE ALSO
+.BR gnome-control-center (1)
+.SH LICENSE
+The Breath application is distributed under the MIT License. Bundled audio
+resources derived from Breathly are distributed under the Mozilla Public
+License 2.0; see the package license directory for details.

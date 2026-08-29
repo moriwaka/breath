@@ -26,7 +26,7 @@ Breath remaining work
 
 [Low priority]
 
-- [ ] Add a concise man page for the `breath` command to remove the RPM lint
+- [x] Add a concise man page for the `breath` command to remove the RPM lint
       warning.
 - [ ] Add screenshot-based UI regression tests.
 - [ ] Add translations beyond the current Japanese UI and English metadata.
