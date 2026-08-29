@@ -109,6 +109,11 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     countdown.add_css_class("title-1");
     let hint = gtk::Label::new(Some("準備しましょう"));
     hint.add_css_class("dim-label");
+    hint.set_wrap(true);
+    let audio_warning = gtk::Label::new(None);
+    audio_warning.add_css_class("warning");
+    audio_warning.set_wrap(true);
+    audio_warning.set_visible(false);
     let guide_progress = Rc::new(RefCell::new(0.0));
     let guide_kind = Rc::new(RefCell::new(StepKind::Inhale));
     let guide = gtk::DrawingArea::new();
@@ -171,6 +176,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     content.append(&countdown);
     content.append(&phase);
     content.append(&hint);
+    content.append(&audio_warning);
     content.append(&remaining);
     content.append(&controls);
     let header = adw::HeaderBar::new();
@@ -196,6 +202,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let timer_guide = guide.clone();
     let timer_audio = audio.clone();
     let timer_settings = settings.clone();
+    let timer_audio_warning = audio_warning.clone();
     let timer_progress = guide_progress.clone();
     let timer_kind = guide_kind.clone();
     let mut announced_step = session.borrow().current_step().map(|(kind, _)| kind);
@@ -220,7 +227,12 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
             *timer_kind.borrow_mut() = kind;
             if announced_step != Some(kind) {
-                play_step_cue(&timer_audio, &timer_settings, kind);
+                if !play_step_cue(&timer_audio, &timer_settings, kind) {
+                    timer_audio_warning.set_label(
+                        "音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。",
+                    );
+                    timer_audio_warning.set_visible(true);
+                }
                 announced_step = Some(kind);
             }
         }
@@ -228,7 +240,13 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         timer_guide.queue_draw();
         if current.status() == SessionStatus::Completed {
             timer_phase.set_label("完了しました");
-            timer_audio.play("endingbell1.mp3");
+            let mode = AudioMode::from_key(timer_settings.string("audio-mode").as_str());
+            if mode.plays_completion_cue() && !timer_audio.play("endingbell1.mp3") {
+                timer_audio_warning.set_label(
+                    "完了音を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。",
+                );
+                timer_audio_warning.set_visible(true);
+            }
             return gtk::glib::ControlFlow::Break;
         }
         gtk::glib::ControlFlow::Continue
@@ -362,21 +380,24 @@ struct AudioPlayer {
 }
 
 impl AudioPlayer {
-    fn play(&self, asset: &str) {
+    fn play(&self, asset: &str) -> bool {
         self.stop();
         let path = audio_path(asset);
         if !path.is_file() {
-            return;
+            return false;
         }
         let uri = gtk::gio::File::for_path(path).uri();
         let Ok(player) = gst::ElementFactory::make("playbin")
             .property_from_str("uri", uri.as_str())
             .build()
         else {
-            return;
+            return false;
         };
         if player.set_state(gst::State::Playing).is_ok() {
             self.current.replace(Some(player));
+            true
+        } else {
+            false
         }
     }
 
@@ -387,11 +408,13 @@ impl AudioPlayer {
     }
 }
 
-fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepKind) {
+fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepKind) -> bool {
     if let Some(asset) =
         AudioMode::from_key(settings.string("audio-mode").as_str()).asset_for_step(step)
     {
-        audio.play(asset);
+        audio.play(asset)
+    } else {
+        true
     }
 }
 

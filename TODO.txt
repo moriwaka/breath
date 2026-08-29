@@ -23,15 +23,15 @@ Breath remaining work
 
 [Medium priority]
 
-- [ ] Verify keyboard navigation, focus order, accessible labels, high-DPI
+- [x] Verify keyboard navigation, focus order, accessible labels, high-DPI
       rendering, small windows, and dark theme behavior.
 - [x] Verify stopping or going back during the countdown behaves correctly.
 - [x] Add a README with build, development, and Fedora installation instructions.
-- [ ] Show a user-visible warning or fallback state when a guidance audio file
+- [x] Show a user-visible warning or fallback state when a guidance audio file
       or GStreamer decoder cannot be played.
-- [ ] Make the "Off" audio mode suppress the completion bell too, and add
+- [x] Make the "Off" audio mode suppress the completion bell too, and add
       regression coverage for the selected audio mode at session completion.
-- [ ] Add AppStream `<releases>` metadata and update it with Cargo, SPEC, and
+- [x] Add AppStream `<releases>` metadata and update it with Cargo, SPEC, and
       CHANGELOG version changes as required by the repository versioning policy.
 - [x] Add Clippy to the development and Fedora CI toolchain, then run it with
       warnings treated as errors.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Show a user-visible warning when guidance audio cannot be played.
+- Keep the completion cue silent when audio mode is set to Off.
+
 ## 0.1.0
 
 - Added a native GTK4 and Libadwaita breathing guide for GNOME.

@@ -1,5 +1,5 @@
 Name:           breath
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
 License:        MIT and MPL-2.0
@@ -53,5 +53,5 @@ appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 %{_datadir}/breath/audio/
 
 %changelog
-* Sat Aug 29 2026 Breath contributors - 0.1.0-1
-- Initial package
+* Sat Aug 29 2026 Breath contributors - 0.2.0-1
+- Show audio playback failures and honor silent completion mode

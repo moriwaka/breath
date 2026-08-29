@@ -46,8 +46,8 @@
   ```sh
   mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
   tar --exclude=.git --exclude=target --exclude=work --sort=name \
-    --transform='s,^\\./,breath-0.1.0/,' \
-    -czf work/rpmbuild/SOURCES/breath-0.1.0.tar.gz .
+    --transform='s,^\\./,breath-0.2.0/,' \
+    -czf work/rpmbuild/SOURCES/breath-0.2.0.tar.gz .
   rpmbuild -ba breath.spec \
     --define '_topdir %{getenv:PWD}/work/rpmbuild' \
     --define '_sourcedir %{getenv:PWD}/work/rpmbuild/SOURCES' \

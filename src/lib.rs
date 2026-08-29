@@ -189,6 +189,11 @@ impl AudioMode {
             (Self::Off, _) => None,
         }
     }
+
+    /// Returns whether the completion cue should be played for this mode.
+    pub fn plays_completion_cue(self) -> bool {
+        self != Self::Off
+    }
 }
 
 /// Time-driven state for one guided breathing session.

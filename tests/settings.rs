@@ -39,3 +39,11 @@ fn audio_modes_resolve_the_correct_phase_cues() {
     );
     assert_eq!(AudioMode::Off.asset_for_step(StepKind::Exhale), None);
 }
+
+#[test]
+fn only_enabled_audio_modes_play_the_completion_cue() {
+    assert!(AudioMode::Paul.plays_completion_cue());
+    assert!(AudioMode::Laura.plays_completion_cue());
+    assert!(AudioMode::Bell.plays_completion_cue());
+    assert!(!AudioMode::Off.plays_completion_cue());
+}
