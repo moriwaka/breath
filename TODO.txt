@@ -3,13 +3,13 @@ Breath remaining work
 
 [High priority]
 
-- [ ] Complete a clean Fedora RPM build with the vendored Cargo dependencies.
-- [ ] Install the generated RPM and verify that the application launches.
+- [x] Complete a clean Fedora RPM build with the vendored Cargo dependencies.
+- [x] Install the generated RPM and verify that the application launches.
 - [ ] Verify audio playback, screen transitions, countdown, pause, resume, stop,
       and back navigation on a real GNOME desktop.
 - [ ] Add AT-SPI UI smoke tests for the countdown, controls, preferences, and
       screen transitions.
-- [ ] Verify RPM dependencies and all installed file locations.
+- [x] Verify RPM dependencies and all installed file locations.
 
 [Medium priority]
 
