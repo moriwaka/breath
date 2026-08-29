@@ -27,9 +27,9 @@
 - Validate desktop integration with `desktop-file-validate data/io.github.moriwaka.Breath.desktop` and `appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml`.
 - The UI uses Japanese by default and shows English when a locale beginning
   with `en` is present in `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, or `LANG`.
-- Run `python3 tests/screenshot_regression.py` in a GNOME session with
-  `gnome-screenshot` installed for native screen captures; it reports an
-  error when the capture utility is unavailable.
+- Run `python3 tests/screenshot_regression.py` in a GNOME session with the
+  Screenshot Portal available for native screen captures; it skips when the
+  portal is unavailable or the request is not approved.
 - Do not add web UI dependencies or remote runtime assets.
 
 ## Versioning

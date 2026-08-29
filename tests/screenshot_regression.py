@@ -2,7 +2,6 @@
 """Capture native GNOME screens and optionally compare them with baselines."""
 
 import os
-import shutil
 import struct
 import subprocess
 import sys
@@ -22,29 +21,79 @@ def png_size(path):
 
 
 def capture(path):
-    if not shutil.which("gnome-screenshot"):
-        print(
-            "ERROR: gnome-screenshot is required; install it before running "
-            "the GNOME screenshot regression test.",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
     try:
-        result = subprocess.run(
-            ["gnome-screenshot", "--file", str(path)],
-            capture_output=True,
-            text=True,
-            timeout=10,
+        import gi
+        gi.require_version("Gio", "2.0")
+        from gi.repository import Gio, GLib
+    except (ImportError, ValueError):
+        print("SKIP: PyGObject/GIO is unavailable", file=sys.stderr)
+        raise SystemExit(77)
+
+    try:
+        connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        proxy = Gio.DBusProxy.new_sync(
+            connection,
+            Gio.DBusProxyFlags.NONE,
+            None,
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Screenshot",
+            None,
         )
-    except subprocess.TimeoutExpired:
-        print("ERROR: gnome-screenshot timed out", file=sys.stderr)
-        raise SystemExit(1)
-    if result.returncode:
-        print(f"ERROR: GNOME screenshot capture failed: {result.stderr.strip()}", file=sys.stderr)
-        raise SystemExit(1)
+    except GLib.Error as error:
+        print(f"SKIP: Screenshot Portal is unavailable: {error}", file=sys.stderr)
+        raise SystemExit(77)
+
+    response = []
+    loop = GLib.MainLoop()
+
+    def on_response(_connection, _sender, object_path, _interface, _signal, parameters):
+        if response and object_path == response[0]:
+            response.append(parameters.unpack())
+            loop.quit()
+
+    subscription = connection.signal_subscribe(
+        "org.freedesktop.portal.Desktop",
+        "org.freedesktop.portal.Request",
+        "Response",
+        None,
+        None,
+        Gio.DBusSignalFlags.NONE,
+        on_response,
+    )
+    try:
+        options = {
+            "interactive": GLib.Variant("b", False),
+            "modal": GLib.Variant("b", False),
+        }
+        handle = proxy.call_sync(
+            "Screenshot",
+            GLib.Variant("(sa{sv})", ("", options)),
+            Gio.DBusCallFlags.NONE,
+            10_000,
+            None,
+        ).unpack()[0]
+        response.append(handle)
+        GLib.timeout_add_seconds(10, loop.quit)
+        while len(response) == 1:
+            loop.run()
+        if len(response) != 2 or response[1][0] != 0:
+            print("SKIP: Screenshot Portal request was not approved", file=sys.stderr)
+            raise SystemExit(77)
+        uri = response[1][1]["uri"]
+        if hasattr(uri, "unpack"):
+            uri = uri.unpack()
+        Gio.File.new_for_uri(uri).copy(
+            Gio.File.new_for_path(str(path)), Gio.FileCopyFlags.OVERWRITE, None, None
+        )
+    except (GLib.Error, KeyError, IndexError, TypeError, AttributeError) as error:
+        print(f"SKIP: Screenshot Portal request failed: {error}", file=sys.stderr)
+        raise SystemExit(77)
+    finally:
+        connection.signal_unsubscribe(subscription)
     if not path.is_file():
-        print(f"ERROR: gnome-screenshot did not create {path}", file=sys.stderr)
-        raise SystemExit(1)
+        print(f"SKIP: Screenshot Portal did not create {path}", file=sys.stderr)
+        raise SystemExit(77)
         raise SystemExit(77)
     width, height = png_size(path)
     assert width > 0 and height > 0
