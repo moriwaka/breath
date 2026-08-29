@@ -65,6 +65,10 @@
 ## Git and safety
 
 - Inspect `git status --short` before editing and commit only intended source, test, metadata, and instruction changes.
+- Run `gh` commands and Git operations that write repository history or contact
+  a remote (`git add`, `git commit`, `git push`, tags, and releases) outside the
+  sandbox; the sandbox may block `.git` writes and network access. Never expose
+  authentication tokens in command output or committed files.
 - At each coherent, verified milestone, commit the focused changes before
   starting the next slice. Keep generated files under `work/` out of commits.
 - Before a milestone commit, run `git diff --check`, inspect the staged diff,
