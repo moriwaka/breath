@@ -1,0 +1,2 @@
+# Keep the vendored fixture in the line-ending form recorded by its checksum.
+vendor/system-deps/src/tests/testlibwithrpath.pc text eol=crlf
