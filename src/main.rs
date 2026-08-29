@@ -420,8 +420,12 @@ fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepK
 }
 
 fn audio_path(asset: &str) -> PathBuf {
-    let installed = PathBuf::from(AUDIO_DIR).join(asset);
-    if installed.is_file() {
+    let override_active = std::env::var_os("BREATH_AUDIO_DIR").is_some();
+    let audio_dir = std::env::var_os("BREATH_AUDIO_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(AUDIO_DIR));
+    let installed = audio_dir.join(asset);
+    if installed.is_file() || override_active {
         installed
     } else {
         PathBuf::from("assets/audio").join(asset)

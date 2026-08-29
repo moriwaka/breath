@@ -54,11 +54,24 @@ jobs:
         shell: bash
         run: |
           python3 -m py_compile tests/ui_smoke.py
+          python3 -m py_compile tests/ui_locale.py tests/ui_audio_failure.py
           set +e
           python3 tests/ui_smoke.py
           status=$?
           set -e
           test "$status" -eq 0 -o "$status" -eq 77
+
+      - name: Check translated and audio failure UI tests
+        shell: bash
+        run: |
+          set +e
+          python3 tests/ui_locale.py
+          locale_status=$?
+          python3 tests/ui_audio_failure.py
+          audio_status=$?
+          set -e
+          test "$locale_status" -eq 0 -o "$locale_status" -eq 77
+          test "$audio_status" -eq 0 -o "$audio_status" -eq 77
 
       - name: Check screenshot regression test harness
         run: python3 -m py_compile tests/screenshot_regression.py
@@ -69,8 +82,8 @@ jobs:
           set -euo pipefail
           mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
           tar --exclude=.git --exclude=target --exclude=work --sort=name \
-            --transform='s,^\./,breath-0.2.0/,' \
-            -czf work/rpmbuild/SOURCES/breath-0.2.0.tar.gz .
+            --transform='s,^\./,breath-0.3.0/,' \
+            -czf work/rpmbuild/SOURCES/breath-0.3.0.tar.gz .
           rpmbuild -ba breath.spec \
             --define "_topdir $GITHUB_WORKSPACE/work/rpmbuild" \
             --define "_sourcedir $GITHUB_WORKSPACE/work/rpmbuild/SOURCES" \

@@ -1,19 +1,4 @@
 Breath remaining work
 =====================
 
-[Medium priority]
-
-- [ ] Add automated UI coverage for the English locale path, including
-      accessible names and the translated settings/session controls.
-- [ ] Add an automated UI test for the user-visible audio playback failure
-      warning, not only the underlying audio-mode unit test.
-- [ ] Fix the Screenshot Portal test timeout path so a timeout exits as SKIP
-      instead of restarting the main loop indefinitely.
-
-[Low priority]
-
-- [ ] Add committed, reproducible screenshot baselines or a GNOME-specific
-      comparison strategy; the current test compares only when an external
-      baseline directory is supplied.
-- [ ] Update the stale AGENTS.md project description that still says the UI is
-      Japanese-only.
+All planned work is complete.

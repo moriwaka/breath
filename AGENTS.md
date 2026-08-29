@@ -5,7 +5,7 @@
 - `breath` is a native GNOME desktop breathing guide written in Rust.
 - UI uses GTK4 and Libadwaita; it must not introduce a browser, Electron, or web runtime.
 - The application ID is `io.github.moriwaka.Breath` and the binary is `breath`.
-- User-facing text is currently Japanese, while the package metadata and source identifiers remain English.
+- User-facing text defaults to Japanese and switches to English for English locales; package metadata and source identifiers remain English.
 
 ## Repository map
 

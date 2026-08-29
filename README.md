@@ -59,15 +59,31 @@ python3 tests/ui_smoke.py target/debug/breath
 It checks the home screen, a preset start action, the `3`, `2`, `1` countdown,
 and session controls. It exits with code 77 when AT-SPI is unavailable.
 
+The translated English UI and audio failure warning have separate AT-SPI
+checks:
+
+```sh
+python3 tests/ui_locale.py
+python3 tests/ui_audio_failure.py
+```
+
+The audio check sets `BREATH_AUDIO_DIR` to a missing directory so it does not
+modify installed audio files.
+
 For screenshot regression checks, run this in a GNOME session with the
-Screenshot Portal available. It
-captures the home and session screens under `work/screenshots/`; set
-`BREATH_SCREENSHOT_BASELINE` to a directory containing matching `home.png` and
-`session.png` files to compare against approved screenshots:
+Screenshot Portal available. It captures the home and session screens under
+`work/screenshots/` and verifies that both Portal responses are valid PNGs with
+the same GNOME screen dimensions:
 
 ```sh
 python3 tests/screenshot_regression.py
 ```
+
+The Portal captures the complete desktop, so pixel baselines would include
+unrelated user windows and are intentionally not committed. To compare against
+a baseline captured for a controlled GNOME display profile, set
+`BREATH_SCREENSHOT_BASELINE` to a directory containing matching `home.png` and
+`session.png` files.
 
 ## License and attribution
 

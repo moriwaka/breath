@@ -45,12 +45,18 @@ def capture(path):
         raise SystemExit(77)
 
     response = []
+    timed_out = []
     loop = GLib.MainLoop()
 
     def on_response(_connection, _sender, object_path, _interface, _signal, parameters):
         if response and object_path == response[0]:
             response.append(parameters.unpack())
             loop.quit()
+
+    def on_timeout():
+        timed_out.append(True)
+        loop.quit()
+        return GLib.SOURCE_REMOVE
 
     subscription = connection.signal_subscribe(
         "org.freedesktop.portal.Desktop",
@@ -74,9 +80,12 @@ def capture(path):
             None,
         ).unpack()[0]
         response.append(handle)
-        GLib.timeout_add_seconds(10, loop.quit)
+        GLib.timeout_add_seconds(10, on_timeout)
         while len(response) == 1:
             loop.run()
+        if timed_out:
+            print("SKIP: Screenshot Portal request timed out", file=sys.stderr)
+            raise SystemExit(77)
         if len(response) != 2 or response[1][0] != 0:
             print("SKIP: Screenshot Portal request was not approved", file=sys.stderr)
             raise SystemExit(77)
@@ -94,7 +103,6 @@ def capture(path):
     if not path.is_file():
         print(f"SKIP: Screenshot Portal did not create {path}", file=sys.stderr)
         raise SystemExit(77)
-        raise SystemExit(77)
     width, height = png_size(path)
     assert width > 0 and height > 0
 
@@ -108,10 +116,17 @@ def main():
         capture(output / "home.png")
         time.sleep(3.5)
         capture(output / "session.png")
+        home_size = png_size(output / "home.png")
+        session_size = png_size(output / "session.png")
+        if home_size != session_size:
+            raise AssertionError(
+                f"GNOME Portal returned inconsistent screen sizes: {home_size} != {session_size}"
+            )
         baseline = os.environ.get("BREATH_SCREENSHOT_BASELINE")
         if baseline:
+            baseline_path = Path(baseline)
             for name in ("home.png", "session.png"):
-                expected = Path(baseline) / name
+                expected = baseline_path / name
                 if not expected.is_file():
                     raise AssertionError(f"missing screenshot baseline: {expected}")
                 result = subprocess.run(
