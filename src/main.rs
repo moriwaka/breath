@@ -78,28 +78,65 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     });
     content.append(&preferences);
 
-    let layout = gtk::Box::new(gtk::Orientation::Vertical, 0);
-    layout.append(&header);
-    layout.append(&content);
-    window.set_content(Some(&layout));
+    let clamp = adw::Clamp::builder()
+        .maximum_size(680)
+        .child(&content)
+        .build();
+    let scrolled = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .child(&clamp)
+        .build();
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&header);
+    toolbar.set_content(Some(&scrolled));
+    window.set_content(Some(&toolbar));
 }
 
 fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, id: PresetId) {
     let preset = preset_by_id(id);
-    let session = Rc::new(RefCell::new(Session::start(
+    let session = Rc::new(RefCell::new(Session::start_countdown(
         preset,
         session_length(settings).as_option_ms(),
+        3_000,
     )));
     let audio = Rc::new(AudioPlayer::default());
     let phase = gtk::Label::new(Some("吸う"));
     phase.add_css_class("title-1");
     let remaining = gtk::Label::new(None);
-    remaining.add_css_class("title-3");
+    remaining.add_css_class("title-2");
+    remaining.set_visible(false);
+    let countdown = gtk::Label::new(Some("3"));
+    countdown.add_css_class("title-1");
+    let hint = gtk::Label::new(Some("準備しましょう"));
+    hint.add_css_class("dim-label");
+    let guide_progress = Rc::new(RefCell::new(0.0));
+    let guide_kind = Rc::new(RefCell::new(StepKind::Inhale));
     let guide = gtk::DrawingArea::new();
     guide.set_content_width(260);
     guide.set_content_height(260);
-    guide.set_draw_func(|_, cr, width, height| {
-        let radius = f64::from(width.min(height)) * 0.31;
+    let draw_progress = guide_progress.clone();
+    let draw_kind = guide_kind.clone();
+    guide.set_draw_func(move |_, cr, width, height| {
+        let progress = *draw_progress.borrow();
+        let kind = *draw_kind.borrow();
+        let scale = match kind {
+            StepKind::Inhale => 0.58 + progress * 0.42,
+            StepKind::Exhale => 1.0 - progress * 0.42,
+            StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => 1.0,
+        };
+        let max_radius = f64::from(width.min(height)) * 0.31;
+        cr.set_source_rgba(0.18, 0.47, 0.56, 0.18);
+        cr.set_line_width(2.0);
+        cr.arc(
+            f64::from(width) / 2.0,
+            f64::from(height) / 2.0,
+            max_radius,
+            0.0,
+            std::f64::consts::TAU,
+        );
+        let _ = cr.stroke();
+        let radius = max_radius * scale;
+        cr.set_source_rgba(0.18, 0.47, 0.56, 0.85);
         cr.set_source_rgba(0.18, 0.47, 0.56, 0.85);
         cr.arc(
             f64::from(width) / 2.0,
@@ -120,25 +157,45 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     controls.append(&stop);
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
+    content.set_margin_top(24);
+    content.set_margin_bottom(24);
+    content.set_margin_start(24);
+    content.set_margin_end(24);
     content.set_valign(gtk::Align::Center);
     content.set_halign(gtk::Align::Center);
-    content.append(&gtk::Label::new(Some(japanese_name(id))));
+    let name = gtk::Label::new(Some(japanese_name(id)));
+    name.add_css_class("title-2");
+    content.append(&name);
     content.append(&guide);
+    content.append(&countdown);
     content.append(&phase);
+    content.append(&hint);
     content.append(&remaining);
     content.append(&controls);
-    window.set_content(Some(&content));
-
-    if let Some((kind, _)) = session.borrow().current_step() {
-        play_step_cue(&audio, settings, kind);
-    }
+    let header = adw::HeaderBar::new();
+    header.set_title_widget(Some(&adw::WindowTitle::new("Breath", japanese_name(id))));
+    let back = gtk::Button::from_icon_name("go-previous-symbolic");
+    back.set_tooltip_text(Some("ホームに戻る"));
+    header.pack_start(&back);
+    let clamp = adw::Clamp::builder()
+        .maximum_size(680)
+        .child(&content)
+        .build();
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&header);
+    toolbar.set_content(Some(&clamp));
+    window.set_content(Some(&toolbar));
 
     let timer_session = session.clone();
     let timer_phase = phase.clone();
+    let timer_hint = hint.clone();
     let timer_remaining = remaining.clone();
+    let timer_countdown = countdown.clone();
     let timer_guide = guide.clone();
     let timer_audio = audio.clone();
     let timer_settings = settings.clone();
+    let timer_progress = guide_progress.clone();
+    let timer_kind = guide_kind.clone();
     let mut announced_step = session.borrow().current_step().map(|(kind, _)| kind);
     gtk::glib::timeout_add_local(Duration::from_millis(100), move || {
         let mut current = timer_session.borrow_mut();
@@ -146,8 +203,19 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Stopped {
             return gtk::glib::ControlFlow::Break;
         }
-        if let Some((kind, _)) = current.current_step() {
+        if current.status() == SessionStatus::Countdown {
+            timer_countdown.set_visible(true);
+            timer_remaining.set_visible(false);
+            timer_phase.set_label("準備");
+            timer_hint.set_label("まもなく開始します");
+            timer_countdown.set_label(&format_countdown(current.countdown_remaining_ms()));
+        } else if let Some((kind, _)) = current.current_step() {
+            timer_countdown.set_visible(false);
+            timer_remaining.set_visible(true);
             timer_phase.set_label(japanese_step(kind));
+            timer_hint.set_label(japanese_hint(kind));
+            *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
+            *timer_kind.borrow_mut() = kind;
             if announced_step != Some(kind) {
                 play_step_cue(&timer_audio, &timer_settings, kind);
                 announced_step = Some(kind);
@@ -182,6 +250,15 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         stop_session.borrow_mut().stop();
         stop_audio.stop();
         show_home(&window_for_stop, &settings_for_stop);
+    });
+    let back_session = session.clone();
+    let back_audio = audio.clone();
+    let window_for_back = window.clone();
+    let settings_for_back = settings.clone();
+    back.connect_clicked(move |_| {
+        back_session.borrow_mut().stop();
+        back_audio.stop();
+        show_home(&window_for_back, &settings_for_back);
     });
 }
 
@@ -354,5 +431,18 @@ fn format_remaining(remaining: Option<u32>) -> String {
             (milliseconds / 1_000) % 60
         ),
         None => "無制限セッション".to_string(),
+    }
+}
+
+fn format_countdown(remaining: Option<u32>) -> String {
+    let seconds = remaining.unwrap_or(0).div_ceil(1_000);
+    format!("開始まで {seconds}")
+}
+
+fn japanese_hint(step: StepKind) -> &'static str {
+    match step {
+        StepKind::Inhale => "ゆっくり大きく",
+        StepKind::Exhale => "ゆっくり小さく",
+        StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => "そのまま保ちます",
     }
 }

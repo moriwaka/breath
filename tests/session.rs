@@ -61,3 +61,44 @@ fn unlimited_session_keeps_running_across_full_cycles() {
     assert_eq!(session.phase_remaining_ms(), Some(4_000));
     assert_eq!(session.session_remaining_ms(), None);
 }
+
+#[test]
+fn empty_preset_is_completed_without_panicking() {
+    let empty = breath::Preset {
+        id: PresetId::Awake,
+        default_name: "Empty",
+        steps: [0, 0, 0, 0],
+    };
+
+    let session = Session::start(&empty, None);
+
+    assert_eq!(session.status(), SessionStatus::Completed);
+    assert_eq!(session.current_step(), None);
+}
+
+#[test]
+fn phase_progress_reports_elapsed_fraction() {
+    let mut session = Session::start(preset_by_id(PresetId::Awake), None);
+
+    assert_eq!(session.phase_progress(), Some(0.0));
+    session.advance(1_500);
+
+    assert_eq!(session.phase_progress(), Some(0.25));
+}
+
+#[test]
+fn countdown_session_waits_before_starting_breathing() {
+    let mut session = Session::start_countdown(preset_by_id(PresetId::Awake), None, 3_000);
+
+    assert_eq!(session.status(), SessionStatus::Countdown);
+    assert_eq!(session.countdown_remaining_ms(), Some(3_000));
+    assert_eq!(session.current_step(), None);
+
+    session.advance(2_000);
+    assert_eq!(session.status(), SessionStatus::Countdown);
+    assert_eq!(session.countdown_remaining_ms(), Some(1_000));
+
+    session.advance(1_000);
+    assert_eq!(session.status(), SessionStatus::Running);
+    assert_eq!(session.current_step(), Some((StepKind::Inhale, 6_000)));
+}

@@ -106,6 +106,7 @@ pub fn active_steps(preset: &Preset) -> Vec<(StepKind, u32)> {
 /// The externally visible lifecycle of a guided session.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SessionStatus {
+    Countdown,
     Running,
     Paused,
     Completed,
@@ -203,24 +204,49 @@ pub struct Session {
     phase_elapsed_ms: u32,
     session_elapsed_ms: u32,
     session_limit_ms: Option<u32>,
+    countdown_remaining_ms: Option<u32>,
     status: SessionStatus,
 }
 
 impl Session {
     /// Starts a session immediately. `None` denotes an unlimited session.
     pub fn start(preset: &Preset, session_limit_ms: Option<u32>) -> Self {
+        let steps = active_steps(preset);
         Self {
-            steps: active_steps(preset),
+            status: if steps.is_empty() {
+                SessionStatus::Completed
+            } else {
+                SessionStatus::Running
+            },
+            steps,
             phase_index: 0,
             phase_elapsed_ms: 0,
             session_elapsed_ms: 0,
             session_limit_ms,
-            status: SessionStatus::Running,
+            countdown_remaining_ms: None,
         }
+    }
+
+    /// Starts a session after a short preparation countdown.
+    pub fn start_countdown(
+        preset: &Preset,
+        session_limit_ms: Option<u32>,
+        countdown_ms: u32,
+    ) -> Self {
+        let mut session = Self::start(preset, session_limit_ms);
+        if session.status == SessionStatus::Running && countdown_ms > 0 {
+            session.status = SessionStatus::Countdown;
+            session.countdown_remaining_ms = Some(countdown_ms);
+        }
+        session
     }
 
     pub fn status(&self) -> SessionStatus {
         self.status
+    }
+
+    pub fn countdown_remaining_ms(&self) -> Option<u32> {
+        self.countdown_remaining_ms
     }
 
     pub fn current_step(&self) -> Option<(StepKind, u32)> {
@@ -231,6 +257,12 @@ impl Session {
     pub fn phase_remaining_ms(&self) -> Option<u32> {
         self.current_step()
             .map(|(_, duration)| duration - self.phase_elapsed_ms)
+    }
+
+    /// Returns the current phase's elapsed fraction in the range 0.0..=1.0.
+    pub fn phase_progress(&self) -> Option<f64> {
+        self.current_step()
+            .map(|(_, duration)| f64::from(self.phase_elapsed_ms) / f64::from(duration))
     }
 
     pub fn session_remaining_ms(&self) -> Option<u32> {
@@ -258,6 +290,17 @@ impl Session {
 
     /// Advances the session by active elapsed time in milliseconds.
     pub fn advance(&mut self, elapsed_ms: u32) {
+        if self.status == SessionStatus::Countdown {
+            let remaining = self.countdown_remaining_ms.unwrap_or(0);
+            if elapsed_ms < remaining {
+                self.countdown_remaining_ms = Some(remaining - elapsed_ms);
+                return;
+            }
+            self.countdown_remaining_ms = None;
+            self.status = SessionStatus::Running;
+            self.advance(elapsed_ms - remaining);
+            return;
+        }
         if self.status != SessionStatus::Running {
             return;
         }
