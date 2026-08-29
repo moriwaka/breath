@@ -112,6 +112,69 @@ pub enum SessionStatus {
     Stopped,
 }
 
+/// A persisted duration selection. Zero minutes denotes no automatic end time.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SessionLength(u8);
+
+impl SessionLength {
+    pub const DEFAULT_MINUTES: u8 = 5;
+    pub const MAX_MINUTES: u8 = 60;
+
+    pub fn from_minutes(minutes: u8) -> Self {
+        Self(minutes.min(Self::MAX_MINUTES))
+    }
+
+    pub fn minutes(self) -> u8 {
+        self.0
+    }
+
+    pub fn as_option_ms(self) -> Option<u32> {
+        (self.0 != 0).then(|| u32::from(self.0) * 60_000)
+    }
+}
+
+impl Default for SessionLength {
+    fn default() -> Self {
+        Self(Self::DEFAULT_MINUTES)
+    }
+}
+
+/// The available phase-audio choices.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AudioMode {
+    Paul,
+    Laura,
+    Bell,
+    Off,
+}
+
+impl AudioMode {
+    pub fn from_key(value: &str) -> Self {
+        match value {
+            "paul" => Self::Paul,
+            "laura" => Self::Laura,
+            "bell" => Self::Bell,
+            "off" => Self::Off,
+            _ => Self::default(),
+        }
+    }
+
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Paul => "paul",
+            Self::Laura => "laura",
+            Self::Bell => "bell",
+            Self::Off => "off",
+        }
+    }
+}
+
+impl Default for AudioMode {
+    fn default() -> Self {
+        Self::Paul
+    }
+}
+
 /// Time-driven state for one guided breathing session.
 #[derive(Clone, Debug)]
 pub struct Session {
