@@ -49,3 +49,25 @@
 - Inspect `git status --short` before editing and commit only intended source, test, metadata, and instruction changes.
 - Do not delete or reset user files. Ignore unrelated generated files.
 - Before reporting success, verify the final command for that claim actually passed.
+
+## Tasks that require running outside the sandbox
+
+- Launching the GTK application against the user's real Wayland/X11 display.
+  A sandbox may expose `DISPLAY` or `WAYLAND_DISPLAY` but still deny the
+  display connection.
+- Running AT-SPI tests such as `tests/ui_smoke.py`. They need the user's
+  session D-Bus and accessibility bus; run them in the GNOME session, not in a
+  filesystem-only sandbox.
+- Checking real audio output, keyboard focus, window sizing, dark theme, and
+  other compositor-dependent behavior.
+- Installing or updating the system package with `sudo rpm -Uvh ...`; this
+  writes to `/usr` and requires the user's password. Package inspection with
+  `rpm -qpl`, `rpm -qp --requires`, and `rpm -V` does not normally need root.
+- Running package post-install checks that update system-wide caches, such as
+  GSettings schema or icon caches, when they are not already handled by the
+  package manager.
+
+When one of these checks is unavailable in the sandbox, report the exact
+environment limitation and do not claim the check passed. Keep project build
+trees, logs, and generated packages under `./work/` even when the command is
+run outside the sandbox.

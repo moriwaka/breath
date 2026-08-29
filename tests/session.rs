@@ -94,7 +94,11 @@ fn countdown_session_waits_before_starting_breathing() {
     assert_eq!(session.countdown_remaining_ms(), Some(3_000));
     assert_eq!(session.current_step(), None);
 
-    session.advance(2_000);
+    session.advance(1_000);
+    assert_eq!(session.status(), SessionStatus::Countdown);
+    assert_eq!(session.countdown_remaining_ms(), Some(2_000));
+
+    session.advance(1_000);
     assert_eq!(session.status(), SessionStatus::Countdown);
     assert_eq!(session.countdown_remaining_ms(), Some(1_000));
 
