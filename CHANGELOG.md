@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Distinguish the hold after inhaling from the hold after exhaling with
+  different guide circle sizes.
+
 ## 0.3.0
 
 - Added English UI translations, selected automatically for English locales.

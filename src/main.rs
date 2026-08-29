@@ -89,6 +89,15 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     window.set_content(Some(&toolbar));
 }
 
+fn guide_scale(kind: StepKind, progress: f64) -> f64 {
+    match kind {
+        StepKind::Inhale => 0.58 + progress * 0.42,
+        StepKind::Exhale => 1.0 - progress * 0.42,
+        StepKind::HoldAfterInhale => 1.0,
+        StepKind::HoldAfterExhale => 0.58,
+    }
+}
+
 fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, id: PresetId) {
     let preset = preset_by_id(id);
     let session = Rc::new(RefCell::new(Session::start_countdown(
@@ -121,11 +130,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     guide.set_draw_func(move |_, cr, width, height| {
         let progress = *draw_progress.borrow();
         let kind = *draw_kind.borrow();
-        let scale = match kind {
-            StepKind::Inhale => 0.58 + progress * 0.42,
-            StepKind::Exhale => 1.0 - progress * 0.42,
-            StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => 1.0,
-        };
+        let scale = guide_scale(kind, progress);
         let max_radius = f64::from(width.min(height)) * 0.31;
         cr.set_source_rgba(0.18, 0.47, 0.56, 0.18);
         cr.set_line_width(2.0);
@@ -544,4 +549,17 @@ fn is_english() -> bool {
 
 fn tr(japanese: &'static str, english: &'static str) -> &'static str {
     if is_english() { english } else { japanese }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hold_phases_use_distinct_circle_sizes() {
+        assert_ne!(
+            guide_scale(StepKind::HoldAfterInhale, 0.5),
+            guide_scale(StepKind::HoldAfterExhale, 0.5)
+        );
+    }
 }

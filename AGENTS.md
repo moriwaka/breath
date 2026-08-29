@@ -34,8 +34,9 @@
 
 ## Versioning
 
-- Any change to application behavior or user-visible functionality must bump
-  the minor version (for example, `0.1.0` to `0.2.0`).
+- Each release operation must bump the minor version (for example, `0.1.0` to
+  `0.2.0`), including releases that contain only documentation or tooling
+  changes.
 - Keep the version synchronized in `Cargo.toml`, `breath.spec`, the AppStream
   release metadata, and `CHANGELOG.md`.
 - Use only the RPM `Release` field for rebuilds that do not change behavior.
@@ -51,8 +52,8 @@
   ```sh
   mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
   tar --exclude=.git --exclude=target --exclude=work --sort=name \
-    --transform='s,^\\./,breath-0.3.0/,' \
-    -czf work/rpmbuild/SOURCES/breath-0.3.0.tar.gz .
+    --transform='s,^\\./,breath-0.4.0/,' \
+    -czf work/rpmbuild/SOURCES/breath-0.4.0.tar.gz .
   rpmbuild -ba breath.spec \
     --define '_topdir %{getenv:PWD}/work/rpmbuild' \
     --define '_sourcedir %{getenv:PWD}/work/rpmbuild/SOURCES' \
