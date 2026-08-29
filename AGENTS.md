@@ -28,8 +28,8 @@
 - The UI uses Japanese by default and shows English when a locale beginning
   with `en` is present in `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, or `LANG`.
 - Run `python3 tests/screenshot_regression.py` in a GNOME session with
-  `gnome-screenshot` installed for native screen captures; it exits 77 when
-  the capture utility is unavailable.
+  `gnome-screenshot` installed for native screen captures; it reports an
+  error when the capture utility is unavailable.
 - Do not add web UI dependencies or remote runtime assets.
 
 ## Versioning

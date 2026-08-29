@@ -23,13 +23,28 @@ def png_size(path):
 
 def capture(path):
     if not shutil.which("gnome-screenshot"):
-        print("SKIP: gnome-screenshot is not installed", file=sys.stderr)
-        raise SystemExit(77)
-    result = subprocess.run(
-        ["gnome-screenshot", "--file", str(path)], capture_output=True, text=True
-    )
+        print(
+            "ERROR: gnome-screenshot is required; install it before running "
+            "the GNOME screenshot regression test.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    try:
+        result = subprocess.run(
+            ["gnome-screenshot", "--file", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        print("ERROR: gnome-screenshot timed out", file=sys.stderr)
+        raise SystemExit(1)
     if result.returncode:
-        print(f"SKIP: GNOME screenshot capture unavailable: {result.stderr.strip()}", file=sys.stderr)
+        print(f"ERROR: GNOME screenshot capture failed: {result.stderr.strip()}", file=sys.stderr)
+        raise SystemExit(1)
+    if not path.is_file():
+        print(f"ERROR: gnome-screenshot did not create {path}", file=sys.stderr)
+        raise SystemExit(1)
         raise SystemExit(77)
     width, height = png_size(path)
     assert width > 0 and height > 0
