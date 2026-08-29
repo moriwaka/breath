@@ -59,7 +59,14 @@ python3 tests/ui_smoke.py target/debug/breath
 It checks the home screen, a preset start action, the `3`, `2`, `1` countdown,
 and session controls. It exits with code 77 when AT-SPI is unavailable.
 
-## License
+## License and attribution
 
-The application is licensed under MPL-2.0. Bundled Breathly-derived audio
-assets include attribution and license information in `THIRD_PARTY_LICENSES/`.
+The Breath application source code is licensed under the MIT License; see
+[`LICENSE`](LICENSE).
+
+The bundled voice and bell audio resources are adapted from the
+[Breathly app](https://github.com/mmazzarolo/breathly-app). They are included
+under the Mozilla Public License 2.0. The original license text is preserved
+in [`THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt`](THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt).
+The Breathly project and its contributors retain the copyright to those
+resources.

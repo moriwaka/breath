@@ -2,7 +2,7 @@ Name:           breath
 Version:        0.1.0
 Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
-License:        MPL-2.0
+License:        MIT
 URL:            https://github.com/moriwaka/breath
 Source0:        %{name}-%{version}.tar.gz
 
@@ -31,6 +31,7 @@ install -Dpm0644 data/icons/hicolor/512x512/apps/io.github.moriwaka.Breath.png %
 install -d %{buildroot}%{_datadir}/breath/audio
 install -pm0644 assets/audio/*.mp3 %{buildroot}%{_datadir}/breath/audio/
 install -Dpm0644 THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt %{buildroot}%{_datadir}/licenses/%{name}/Breathly-MPL-2.0.txt
+install -Dpm0644 LICENSE %{buildroot}%{_datadir}/licenses/%{name}/LICENSE
 
 %check
 CARGO_TARGET_DIR=%{_builddir}/breath-cargo-target cargo test --offline
@@ -39,6 +40,7 @@ appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 
 %files
 %defattr(-,root,root,-)
+%license LICENSE
 %license THIRD_PARTY_LICENSES/Breathly-MPL-2.0.txt
 %doc README.md CHANGELOG.md
 %{_bindir}/breath
