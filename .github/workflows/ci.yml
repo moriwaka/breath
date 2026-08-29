@@ -30,6 +30,7 @@ jobs:
             pkgconf-pkg-config \
             rpm-build \
             rpmlint \
+            rust-clippy \
             rustfmt
 
       - name: Check out source
@@ -40,6 +41,9 @@ jobs:
 
       - name: Run offline Rust tests
         run: cargo test --offline
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --offline -- -D warnings
 
       - name: Validate desktop metadata
         run: |

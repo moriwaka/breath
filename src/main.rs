@@ -395,10 +395,11 @@ fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepK
 
 fn audio_path(asset: &str) -> PathBuf {
     let installed = PathBuf::from(AUDIO_DIR).join(asset);
-    installed
-        .is_file()
-        .then_some(installed)
-        .unwrap_or_else(|| PathBuf::from("assets/audio").join(asset))
+    if installed.is_file() {
+        installed
+    } else {
+        PathBuf::from("assets/audio").join(asset)
+    }
 }
 
 fn japanese_name(id: PresetId) -> &'static str {

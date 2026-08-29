@@ -14,7 +14,7 @@ Breath remaining work
 - [ ] Reinstall the latest RPM after source changes and rerun `rpm -V`.
 - [x] Run the AT-SPI smoke test against the installed RPM, not only the
       checkout binary.
-- [ ] Fix the RPM source-archive commands in README.md and AGENTS.md. They
+- [x] Fix the RPM source-archive commands in README.md and AGENTS.md. They
       currently omit the required `breath-<version>/` top-level directory, so
       `%autosetup` fails during `%prep`.
 - [ ] Remove or lifecycle-manage the Escape `EventControllerKey` when leaving a
@@ -33,7 +33,7 @@ Breath remaining work
       regression coverage for the selected audio mode at session completion.
 - [ ] Add AppStream `<releases>` metadata and update it with Cargo, SPEC, and
       CHANGELOG version changes as required by the repository versioning policy.
-- [ ] Add Clippy to the development and Fedora CI toolchain, then run it with
+- [x] Add Clippy to the development and Fedora CI toolchain, then run it with
       warnings treated as errors.
 
 [Low priority]

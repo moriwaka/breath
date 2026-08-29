@@ -141,8 +141,9 @@ impl Default for SessionLength {
 }
 
 /// The available phase-audio choices.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum AudioMode {
+    #[default]
     Paul,
     Laura,
     Bell,
@@ -187,12 +188,6 @@ impl AudioMode {
             (Self::Bell, StepKind::HoldAfterInhale | StepKind::Exhale) => Some("cuebell2.mp3"),
             (Self::Off, _) => None,
         }
-    }
-}
-
-impl Default for AudioMode {
-    fn default() -> Self {
-        Self::Paul
     }
 }
 

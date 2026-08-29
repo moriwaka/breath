@@ -31,7 +31,7 @@ temporary files and generated packages under `work/`:
 ```sh
 mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
 tar --exclude=.git --exclude=target --exclude=work --sort=name \
-  --transform='s,^\\.,breath-0.1.0,' \
+  --transform='s,^\\./,breath-0.1.0/,' \
   -czf work/rpmbuild/SOURCES/breath-0.1.0.tar.gz .
 rpmbuild -ba breath.spec \
   --define "_topdir $PWD/work/rpmbuild" \
