@@ -1,5 +1,5 @@
 Name:           breath
-Version:        0.5.0
+Version:        0.6.0
 Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
 License:        MIT and MPL-2.0
@@ -53,7 +53,6 @@ appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 %{_datadir}/breath/audio/
 
 %changelog
-* Sat Aug 29 2026 Breath contributors - 0.5.0-1
-- Move breathing pattern selection into Preferences and remember the choice
-- Distinguish the two hold phases with different guide circle sizes
-- Add English UI translations and screenshot regression harness
+* Sat Aug 29 2026 Breath contributors - 0.6.0-1
+- Use detailed, non-truncated rows for breathing pattern choices
+- Remove the redundant duration prefix from the Deep Calm pattern name

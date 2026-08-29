@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+
+- Show full descriptions and timing details for breathing pattern choices.
+- Remove the redundant duration prefix from the Deep Calm pattern name.
+
 ## 0.5.0
 
 - Move breathing pattern selection into Preferences.
