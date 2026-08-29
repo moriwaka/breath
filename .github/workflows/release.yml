@@ -66,6 +66,7 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
           mkdir -p work/release work/rpmbuild/SOURCES work/rpmbuild/TMP
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git archive --format=tar --prefix="breath-${version}/" "$GITHUB_SHA" \
             | gzip -n > "work/release/breath-${version}.tar.gz"
           cp "work/release/breath-${version}.tar.gz" \
