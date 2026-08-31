@@ -47,14 +47,22 @@ def main():
     command = sys.argv[1:] or ["breath"]
     environment = os.environ.copy()
     environment.update(
-        {"LANGUAGE": "en_US:en", "LC_ALL": "C", "LC_MESSAGES": "C", "LANG": "C"}
+        {
+            "LANGUAGE": "en_US:en",
+            "LC_ALL": "C",
+            "LC_MESSAGES": "C",
+            "LANG": "C",
+        }
     )
     if command[0].endswith("/breath") and command[0] != "breath":
         environment["GSETTINGS_SCHEMA_DIR"] = "work/gsettings"
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        assert find_named(app, "Deep Calm"), "English preset name is missing"
+        initial_preset = next(
+            (name for name in ("Deep Calm", "Awake") if find_named(app, name)), None
+        )
+        assert initial_preset, "English preset name is missing"
         preferences = find_named(app, "Preferences", "button")
         assert preferences, "English Preferences action is missing"
         invoke(preferences[0])
@@ -76,6 +84,45 @@ def main():
         assert "A foundational yoga breathing practice  ·  7s / 4s / 8s / 4s" in names, (
             "English long-form preset details are missing"
         )
+
+        target_preset = "Awake" if initial_preset == "Deep Calm" else "Deep Calm"
+        target = find_named(app, target_preset)
+        assert target, f"{target_preset} preset is missing"
+        target_key = {"Deep Calm": "deep-calm", "Awake": "awake"}[target_preset]
+        subprocess.run(
+            [
+                "gsettings",
+                "set",
+                "io.github.moriwaka.Breath",
+                "preset-id",
+                target_key,
+            ],
+            check=True,
+        )
+
+        close = find_named(app, "Close", "button")
+        assert close, "Preferences dialog has no close action"
+        invoke(close[0])
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            app = wait_for_application(timeout=1)
+            if find_named(app, target_preset) and find_named(
+                app,
+                {
+                    "Deep Calm": "Calm your nervous system slowly  ·  4s / 7s / 8s",
+                    "Awake": "For morning energy and focus  ·  6s / 2s",
+                }[target_preset],
+            ):
+                break
+            time.sleep(0.1)
+        assert find_named(app, target_preset), "Home screen did not update the selected preset"
+        assert find_named(
+            app,
+            {
+                "Deep Calm": "Calm your nervous system slowly  ·  4s / 7s / 8s",
+                "Awake": "For morning energy and focus  ·  6s / 2s",
+            }[target_preset],
+        ), "Home screen did not update the selected preset details"
         print("PASS: English locale names and settings controls are exposed via AT-SPI")
         return 0
     finally:

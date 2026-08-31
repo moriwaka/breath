@@ -1,4 +1,9 @@
-use std::{cell::RefCell, path::PathBuf, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    path::PathBuf,
+    rc::Rc,
+    time::Duration,
+};
 
 use adw::prelude::*;
 use breath::{AudioMode, PresetId, Session, SessionLength, SessionStatus, StepKind, preset_by_id};
@@ -32,13 +37,14 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
         tr("呼吸に意識を向けましょう", "Focus on your breathing"),
     )));
 
-    let selected = selected_preset(settings);
+    let selected = Rc::new(Cell::new(selected_preset(settings)));
+    let selected_id = selected.get();
     let selected_summary = adw::ActionRow::builder()
-        .title(preset_name(selected))
+        .title(preset_name(selected_id))
         .subtitle(format!(
             "{}  ·  {}",
-            preset_description(selected),
-            format_steps(preset_by_id(selected).steps)
+            preset_description(selected_id),
+            format_steps(preset_by_id(selected_id).steps)
         ))
         .build();
 
@@ -54,7 +60,14 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     start.set_halign(gtk::Align::Start);
     let window_for_start = window.clone();
     let settings_for_start = settings.clone();
-    start.connect_clicked(move |_| show_session(&window_for_start, &settings_for_start, selected));
+    let selected_for_start = selected.clone();
+    start.connect_clicked(move |_| {
+        show_session(
+            &window_for_start,
+            &settings_for_start,
+            selected_for_start.get(),
+        )
+    });
     content.append(&start);
 
     let duration = gtk::Label::new(Some(&format_session_summary(session_length(settings))));
@@ -70,6 +83,19 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
         show_preferences(&window_for_preferences, &settings_for_preferences)
     });
     content.append(&preferences);
+
+    let selected_for_update = selected.clone();
+    let summary_for_update = selected_summary.clone();
+    settings.connect_changed(Some("preset-id"), move |settings, _| {
+        let id = selected_preset(settings);
+        selected_for_update.set(id);
+        summary_for_update.set_title(preset_name(id));
+        summary_for_update.set_subtitle(&format!(
+            "{}  ·  {}",
+            preset_description(id),
+            format_steps(preset_by_id(id).steps)
+        ));
+    });
 
     let clamp = adw::Clamp::builder()
         .maximum_size(680)
