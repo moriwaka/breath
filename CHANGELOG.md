@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- Refresh the home-screen pattern summary when the selection changes in
+  Preferences.
+
 ## 0.6.0
 
 - Show full descriptions and timing details for breathing pattern choices.
