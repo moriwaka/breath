@@ -12,6 +12,8 @@ BuildRequires:  gtk4-devel
 BuildRequires:  libadwaita-devel
 BuildRequires:  gstreamer1-devel
 BuildRequires:  appstream
+Requires:       gstreamer1-plugins-base
+Requires:       gstreamer1-plugins-good
 
 %description
 Breath is a native GNOME application for guided breathing exercises.

@@ -297,10 +297,11 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
             *timer_kind.borrow_mut() = kind;
             if announced_step != Some(kind) {
-                if !play_step_cue(&timer_audio, &timer_settings, kind) {
-                    timer_audio_warning.set_label(
-                        tr("音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください.", "Audio could not be played. Check the audio file or GStreamer decoder."),
-                    );
+                let warning_for_error = timer_audio_warning.clone();
+                if !play_step_cue(&timer_audio, &timer_settings, kind, move || {
+                    show_audio_warning(&warning_for_error);
+                }) {
+                    timer_audio_warning.set_label(audio_warning_message());
                     timer_audio_warning.set_visible(true);
                 }
                 announced_step = Some(kind);
@@ -311,10 +312,13 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Completed {
             timer_phase.set_label(tr("完了しました", "Complete"));
             let mode = AudioMode::from_key(timer_settings.string("audio-mode").as_str());
-            if mode.plays_completion_cue() && !timer_audio.play("endingbell1.mp3") {
-                timer_audio_warning.set_label(
-                    tr("完了音を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。", "The completion sound could not be played. Check the audio file or GStreamer decoder."),
-                );
+            let warning_for_error = timer_audio_warning.clone();
+            if mode.plays_completion_cue()
+                && !timer_audio.play("endingbell1.mp3", move || {
+                    show_completion_warning(&warning_for_error);
+                })
+            {
+                timer_audio_warning.set_label(completion_warning_message());
                 timer_audio_warning.set_visible(true);
             }
             return gtk::glib::ControlFlow::Break;
@@ -466,10 +470,14 @@ fn audio_mode_for_index(index: u32) -> AudioMode {
 #[derive(Default)]
 struct AudioPlayer {
     current: RefCell<Option<gst::Element>>,
+    bus_watch: RefCell<Option<gst::bus::BusWatchGuard>>,
 }
 
 impl AudioPlayer {
-    fn play(&self, asset: &str) -> bool {
+    fn play<F>(&self, asset: &str, on_error: F) -> bool
+    where
+        F: Fn() + 'static,
+    {
         self.stop();
         let path = audio_path(asset);
         if !path.is_file() {
@@ -482,7 +490,14 @@ impl AudioPlayer {
         else {
             return false;
         };
+        let Some(bus) = player.bus() else {
+            return false;
+        };
+        let Ok(watch) = add_audio_error_watch(&bus, on_error) else {
+            return false;
+        };
         if player.set_state(gst::State::Playing).is_ok() {
+            self.bus_watch.replace(Some(watch));
             self.current.replace(Some(player));
             true
         } else {
@@ -491,20 +506,74 @@ impl AudioPlayer {
     }
 
     fn stop(&self) {
+        self.bus_watch.borrow_mut().take();
         if let Some(player) = self.current.borrow_mut().take() {
             let _ = player.set_state(gst::State::Null);
         }
     }
 }
 
-fn play_step_cue(audio: &AudioPlayer, settings: &gtk::gio::Settings, step: StepKind) -> bool {
+fn play_step_cue<F>(
+    audio: &AudioPlayer,
+    settings: &gtk::gio::Settings,
+    step: StepKind,
+    on_error: F,
+) -> bool
+where
+    F: Fn() + 'static,
+{
     if let Some(asset) =
         AudioMode::from_key(settings.string("audio-mode").as_str()).asset_for_step(step)
     {
-        audio.play(asset)
+        audio.play(asset, on_error)
     } else {
         true
     }
+}
+
+fn audio_message_requires_warning(message: &gst::Message) -> bool {
+    matches!(message.view(), gst::MessageView::Error(_))
+}
+
+fn add_audio_error_watch<F>(
+    bus: &gst::Bus,
+    on_error: F,
+) -> Result<gst::bus::BusWatchGuard, gtk::glib::BoolError>
+where
+    F: Fn() + 'static,
+{
+    bus.add_watch_local(move |_, message| {
+        if audio_message_requires_warning(message) {
+            on_error();
+            gtk::glib::ControlFlow::Break
+        } else {
+            gtk::glib::ControlFlow::Continue
+        }
+    })
+}
+
+fn audio_warning_message() -> &'static str {
+    tr(
+        "音声を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください.",
+        "Audio could not be played. Check the audio file or GStreamer decoder.",
+    )
+}
+
+fn completion_warning_message() -> &'static str {
+    tr(
+        "完了音を再生できません。音声ファイルまたはGStreamerのデコーダーを確認してください。",
+        "The completion sound could not be played. Check the audio file or GStreamer decoder.",
+    )
+}
+
+fn show_audio_warning(warning: &gtk::Label) {
+    warning.set_label(audio_warning_message());
+    warning.set_visible(true);
+}
+
+fn show_completion_warning(warning: &gtk::Label) {
+    warning.set_label(completion_warning_message());
+    warning.set_visible(true);
 }
 
 fn audio_path(asset: &str) -> PathBuf {
@@ -667,5 +736,36 @@ mod tests {
             step_hint(StepKind::Exhale, 2_000),
             tr("短く吐く", "Breathe out briefly")
         );
+    }
+
+    #[test]
+    fn gstreamer_error_messages_require_an_audio_warning() {
+        gst::init().expect("GStreamer must initialize for message construction");
+        let message = gst::message::Error::new(gst::ResourceError::NotFound, "missing decoder");
+
+        assert!(audio_message_requires_warning(&message));
+    }
+
+    #[test]
+    fn gstreamer_bus_errors_notify_the_audio_warning_handler() {
+        gst::init().expect("GStreamer must initialize for bus testing");
+        let pipeline = gst::Pipeline::new();
+        let bus = pipeline.bus().expect("pipeline has a bus");
+        let warned = Rc::new(Cell::new(false));
+        let warning_handler = warned.clone();
+        let _watch = add_audio_error_watch(&bus, move || warning_handler.set(true))
+            .expect("audio error watch registers");
+
+        pipeline
+            .post_message(gst::message::Error::new(
+                gst::ResourceError::NotFound,
+                "missing decoder",
+            ))
+            .expect("test error posts to pipeline bus");
+        while gtk::glib::MainContext::default().pending() {
+            gtk::glib::MainContext::default().iteration(false);
+        }
+
+        assert!(warned.get());
     }
 }
