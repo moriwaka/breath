@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from ui_smoke import find_named, invoke, wait_for_application, walk
+from ui_smoke import find_named, wait_for_application, walk
 
 
 def main():
@@ -59,35 +59,47 @@ def main():
     process = subprocess.Popen(command, env=environment)
     try:
         app = wait_for_application()
-        initial_preset = next(
-            (name for name in ("Deep Calm", "Awake") if find_named(app, name)), None
-        )
-        assert initial_preset, "English preset name is missing"
-        preferences = find_named(app, "Preferences", "button")
-        assert preferences, "English Preferences action is missing"
-        invoke(preferences[0])
-
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
             names = {node.name for node in walk(app) if node.name}
-            if {"Breathing pattern", "Session", "Guidance audio"} <= names:
+            if {"Breathing pattern", "Session", "Guidance audio"} <= names and any(
+                name in names
+                for name in (
+                    "Deep Calm",
+                    "Awake",
+                    "Coherent Breathing",
+                    "Extended Exhale",
+                    "Pranayama",
+                    "Square Breathing",
+                    "Ujjayi",
+                )
+            ):
                 break
             time.sleep(0.1)
         names = {node.name for node in walk(app) if node.name}
+        initial_preset = next(
+            (
+                name
+                for name in (
+                    "Deep Calm",
+                    "Awake",
+                    "Coherent Breathing",
+                    "Extended Exhale",
+                    "Pranayama",
+                    "Square Breathing",
+                    "Ujjayi",
+                )
+                if name in names
+            ),
+            None,
+        )
+        assert initial_preset, "English preset name is missing"
         assert "Breathing pattern" in names, "English breathing pattern group is missing"
-        assert "Session" in names, "English settings group is missing"
+        assert "Session" in names, "English session group is missing"
         assert "Guidance audio" in names, "English audio control is missing"
-        assert "Calm your nervous system slowly  ·  4s / 7s / 8s" in names, (
-            "English preset details are missing"
-        )
-        assert "A foundational yoga breathing practice  ·  7s / 4s / 8s / 4s" in names, (
-            "English long-form preset details are missing"
-        )
 
-        target_preset = "Awake" if initial_preset == "Deep Calm" else "Deep Calm"
-        target = find_named(app, target_preset)
-        assert target, f"{target_preset} preset is missing"
+        target_preset = "Awake" if initial_preset != "Awake" else "Deep Calm"
         target_key = {"Deep Calm": "deep-calm", "Awake": "awake"}[target_preset]
         subprocess.run(
             [
@@ -100,9 +112,6 @@ def main():
             check=True,
         )
 
-        close = find_named(app, "Close", "button")
-        assert close, "Preferences dialog has no close action"
-        invoke(close[0])
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
@@ -123,7 +132,7 @@ def main():
                 "Awake": "For morning energy and focus  ·  6s / 2s",
             }[target_preset],
         ), "Home screen did not update the selected preset details"
-        print("PASS: English locale names and settings controls are exposed via AT-SPI")
+        print("PASS: English locale names and inline settings controls are exposed via AT-SPI")
         return 0
     finally:
         if process.poll() is None:

@@ -9,11 +9,12 @@ from os import environ
 try:
     import pyatspi
 except ImportError:
-    print("SKIP: pyatspi is not installed", file=sys.stderr)
-    raise SystemExit(77)
+    pyatspi = None
 
 
 def walk(node):
+    if node is None:
+        return
     yield node
     for child in node:
         yield from walk(child)
@@ -53,6 +54,9 @@ def invoke(button):
 
 
 def main():
+    if pyatspi is None:
+        print("SKIP: pyatspi is not installed", file=sys.stderr)
+        return 77
     try:
         desktop = pyatspi.Registry.getDesktop(0)
         _ = desktop.childCount

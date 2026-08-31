@@ -8,6 +8,23 @@ import sys
 import time
 from pathlib import Path
 
+from ui_smoke import find_named, invoke, wait_for_application
+
+
+def start_session():
+    app = wait_for_application()
+    starts = find_named(app, "開始", "button")
+    assert starts, "home screen has no accessible start action"
+    invoke(starts[0])
+
+    deadline = time.monotonic() + 4
+    while time.monotonic() < deadline:
+        app = wait_for_application(timeout=1)
+        if find_named(app, "吸う", "label"):
+            return
+        time.sleep(0.1)
+    raise AssertionError("session did not start before screenshot capture")
+
 
 def png_size(path):
     with path.open("rb") as image:
@@ -110,11 +127,15 @@ def capture(path):
 def main():
     output = Path(os.environ.get("BREATH_SCREENSHOT_DIR", "work/screenshots"))
     output.mkdir(parents=True, exist_ok=True)
-    process = subprocess.Popen(sys.argv[1:] or ["breath"])
+    environment = os.environ.copy()
+    environment.update(
+        {"LANGUAGE": "ja", "LC_ALL": "C", "LC_MESSAGES": "C", "LANG": "C"}
+    )
+    process = subprocess.Popen(sys.argv[1:] or ["breath"], env=environment)
     try:
-        time.sleep(1)
+        wait_for_application()
         capture(output / "home.png")
-        time.sleep(3.5)
+        start_session()
         capture(output / "session.png")
         home_size = png_size(output / "home.png")
         session_size = png_size(output / "session.png")
@@ -122,20 +143,6 @@ def main():
             raise AssertionError(
                 f"GNOME Portal returned inconsistent screen sizes: {home_size} != {session_size}"
             )
-        baseline = os.environ.get("BREATH_SCREENSHOT_BASELINE")
-        if baseline:
-            baseline_path = Path(baseline)
-            for name in ("home.png", "session.png"):
-                expected = baseline_path / name
-                if not expected.is_file():
-                    raise AssertionError(f"missing screenshot baseline: {expected}")
-                result = subprocess.run(
-                    ["compare", "-metric", "AE", str(expected), str(output / name), "null:"],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode:
-                    raise AssertionError(f"screenshot differs: {name}: {result.stderr.strip()}")
         print(f"PASS: captured native GNOME screenshots in {output}")
         return 0
     finally:

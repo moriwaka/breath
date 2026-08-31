@@ -55,6 +55,8 @@ jobs:
         run: |
           python3 -m py_compile tests/ui_smoke.py
           python3 -m py_compile tests/ui_locale.py tests/ui_audio_failure.py
+          PYTHONPATH=tests python3 -m unittest \
+            tests/test_ui_helpers.py tests/test_screenshot_regression.py
           set +e
           python3 tests/ui_smoke.py
           status=$?

@@ -31,8 +31,8 @@ temporary files and generated packages under `work/`:
 ```sh
 mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
 tar --exclude=.git --exclude=target --exclude=work --sort=name \
-  --transform='s,^\\./,breath-0.6.0/,' \
-  -czf work/rpmbuild/SOURCES/breath-0.6.0.tar.gz .
+  --transform='s,^\\./,breath-0.7.0/,' \
+  -czf work/rpmbuild/SOURCES/breath-0.7.0.tar.gz .
 rpmbuild -ba breath.spec \
   --define "_topdir $PWD/work/rpmbuild" \
   --define "_sourcedir $PWD/work/rpmbuild/SOURCES" \
@@ -42,7 +42,7 @@ rpmbuild -ba breath.spec \
 Install the package with:
 
 ```sh
-sudo rpm -Uvh --replacepkgs work/rpmbuild/RPMS/x86_64/breath-0.6.0-1*.rpm
+sudo rpm -Uvh --replacepkgs work/rpmbuild/RPMS/x86_64/breath-0.7.0-1*.rpm
 ```
 
 ## Release
@@ -87,11 +87,9 @@ the same GNOME screen dimensions:
 python3 tests/screenshot_regression.py
 ```
 
-The Portal captures the complete desktop, so pixel baselines would include
-unrelated user windows and are intentionally not committed. To compare against
-a baseline captured for a controlled GNOME display profile, set
-`BREATH_SCREENSHOT_BASELINE` to a directory containing matching `home.png` and
-`session.png` files.
+The Portal captures the complete desktop, so the test does not use pixel
+baselines. Instead, AT-SPI confirms the home screen, invokes Start, and waits
+for the inhale phase before it captures each screen.
 
 ## License and attribution
 

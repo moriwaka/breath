@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
 License:        MIT and MPL-2.0
 URL:            https://github.com/moriwaka/breath
-Source0:        %{name}-%{version}.tar.gz
+Source0:        %{url}/archive/refs/tags/v%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 BuildRequires:  cargo
 BuildRequires:  desktop-file-utils

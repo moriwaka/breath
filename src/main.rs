@@ -48,16 +48,23 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
         ))
         .build();
 
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 18);
-    content.set_margin_top(24);
-    content.set_margin_bottom(24);
-    content.set_margin_start(24);
-    content.set_margin_end(24);
-    content.append(&selected_summary);
+    let breathing_group = adw::PreferencesGroup::new();
+    breathing_group.set_title(tr("呼吸法", "Breathing pattern"));
+    breathing_group.add(&selected_summary);
+    let preset_action = gtk::Button::from_icon_name("go-next-symbolic");
+    preset_action.set_tooltip_text(Some(tr("呼吸法を選ぶ", "Choose breathing pattern")));
+    selected_summary.add_suffix(&preset_action);
+    selected_summary.set_activatable_widget(Some(&preset_action));
+    let window_for_preset = window.clone();
+    let settings_for_preset = settings.clone();
+    preset_action
+        .connect_clicked(move |_| show_preset_dialog(&window_for_preset, &settings_for_preset));
 
     let start = gtk::Button::with_label(tr("開始", "Start"));
+    start.set_tooltip_text(Some(tr("呼吸セッションを開始", "Start breathing session")));
+    start.update_property(&[gtk::accessible::Property::Label(tr("開始", "Start"))]);
     start.add_css_class("suggested-action");
-    start.set_halign(gtk::Align::Start);
+    start.set_halign(gtk::Align::Center);
     let window_for_start = window.clone();
     let settings_for_start = settings.clone();
     let selected_for_start = selected.clone();
@@ -68,21 +75,53 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
             selected_for_start.get(),
         )
     });
-    content.append(&start);
+    start.set_size_request(240, 48);
+    start.set_halign(gtk::Align::Center);
 
-    let duration = gtk::Label::new(Some(&format_session_summary(session_length(settings))));
-    duration.add_css_class("dim-label");
-    duration.set_halign(gtk::Align::Start);
-    content.append(&duration);
-
-    let preferences = gtk::Button::with_label(tr("設定", "Preferences"));
-    preferences.set_halign(gtk::Align::Start);
-    let window_for_preferences = window.clone();
-    let settings_for_preferences = settings.clone();
-    preferences.connect_clicked(move |_| {
-        show_preferences(&window_for_preferences, &settings_for_preferences)
+    let session_group = adw::PreferencesGroup::new();
+    session_group.set_title(tr("セッション", "Session"));
+    let duration = adw::SpinRow::with_range(0.0, f64::from(SessionLength::MAX_MINUTES), 1.0);
+    duration.set_title(tr("セッション時間（分）", "Session length (minutes)"));
+    duration.set_value(f64::from(session_length(settings).minutes()));
+    duration.set_subtitle(tr("0分にすると無制限です", "0 minutes means unlimited"));
+    let settings_for_duration = settings.clone();
+    duration.connect_value_notify(move |row| {
+        let minutes = row
+            .value()
+            .round()
+            .clamp(0.0, f64::from(SessionLength::MAX_MINUTES));
+        let _ = settings_for_duration.set_uint("session-minutes", minutes as u32);
     });
-    content.append(&preferences);
+    session_group.add(&duration);
+    let voice = adw::ComboRow::new();
+    voice.set_title(tr("ガイド音声", "Guidance audio"));
+    voice.set_model(Some(&gtk::StringList::new(&[
+        "Paul",
+        "Laura",
+        tr("ベル", "Bell"),
+        tr("オフ", "Off"),
+    ])));
+    voice.set_selected(audio_mode_index(AudioMode::from_key(
+        settings.string("audio-mode").as_str(),
+    )));
+    let settings_for_voice = settings.clone();
+    voice.connect_selected_notify(move |row| {
+        let _ =
+            settings_for_voice.set_string("audio-mode", audio_mode_for_index(row.selected()).key());
+    });
+    session_group.add(&voice);
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 24);
+    content.set_margin_top(32);
+    content.set_margin_bottom(32);
+    content.set_margin_start(24);
+    content.set_margin_end(24);
+    content.append(&breathing_group);
+    content.append(&session_group);
+    let spacer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    spacer.set_vexpand(true);
+    content.append(&spacer);
+    content.append(&start);
 
     let selected_for_update = selected.clone();
     let summary_for_update = selected_summary.clone();
@@ -98,7 +137,7 @@ fn show_home(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
     });
 
     let clamp = adw::Clamp::builder()
-        .maximum_size(680)
+        .maximum_size(560)
         .child(&content)
         .build();
     let scrolled = gtk::ScrolledWindow::builder()
@@ -138,6 +177,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let hint = gtk::Label::new(Some(tr("準備しましょう", "Get ready")));
     hint.add_css_class("dim-label");
     hint.set_wrap(true);
+    hint.set_visible(false);
     let audio_warning = gtk::Label::new(None);
     audio_warning.add_css_class("warning");
     audio_warning.set_wrap(true);
@@ -178,9 +218,17 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     });
 
     let pause = gtk::Button::with_label(tr("一時停止", "Pause"));
+    pause.set_tooltip_text(Some(tr("一時停止", "Pause")));
+    pause.update_property(&[gtk::accessible::Property::Label(tr("一時停止", "Pause"))]);
     pause.set_sensitive(false);
+    pause.set_hexpand(true);
+    pause.set_size_request(140, 48);
     let stop = gtk::Button::with_label(tr("停止", "Stop"));
+    stop.set_tooltip_text(Some(tr("停止", "Stop")));
+    stop.update_property(&[gtk::accessible::Property::Label(tr("停止", "Stop"))]);
     stop.add_css_class("destructive-action");
+    stop.set_hexpand(true);
+    stop.set_size_request(140, 48);
     let controls = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     controls.set_halign(gtk::Align::Center);
     controls.append(&pause);
@@ -193,9 +241,6 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     content.set_margin_end(24);
     content.set_valign(gtk::Align::Center);
     content.set_halign(gtk::Align::Center);
-    let name = gtk::Label::new(Some(preset_name(id)));
-    name.add_css_class("title-2");
-    content.append(&name);
     content.append(&guide);
     content.append(&countdown);
     content.append(&phase);
@@ -239,15 +284,16 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Countdown {
             timer_countdown.set_visible(true);
             timer_remaining.set_visible(false);
-            timer_phase.set_label(tr("準備", "Get ready"));
-            timer_hint.set_label(tr("まもなく開始します", "Starting soon"));
+            timer_phase.set_label(tr("開始まで", "Starts in"));
+            timer_hint.set_visible(false);
             timer_countdown.set_label(&format_countdown(current.countdown_remaining_ms()));
-        } else if let Some((kind, _)) = current.current_step() {
+        } else if let Some((kind, duration)) = current.current_step() {
             timer_countdown.set_visible(false);
             timer_remaining.set_visible(true);
             timer_pause.set_sensitive(true);
             timer_phase.set_label(step_name(kind));
-            timer_hint.set_label(step_hint(kind));
+            timer_hint.set_label(step_hint(kind, duration));
+            timer_hint.set_visible(true);
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
             *timer_kind.borrow_mut() = kind;
             if announced_step != Some(kind) {
@@ -282,9 +328,13 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Running {
             current.pause();
             button.set_label(tr("再開", "Resume"));
+            button.set_tooltip_text(Some(tr("セッションを再開", "Resume session")));
+            button.update_property(&[gtk::accessible::Property::Label(tr("再開", "Resume"))]);
         } else if current.status() == SessionStatus::Paused {
             current.resume();
             button.set_label(tr("一時停止", "Pause"));
+            button.set_tooltip_text(Some(tr("一時停止", "Pause")));
+            button.update_property(&[gtk::accessible::Property::Label(tr("一時停止", "Pause"))]);
         }
     });
     let stop_session = session.clone();
@@ -338,22 +388,13 @@ fn selected_preset(settings: &gtk::gio::Settings) -> PresetId {
     PresetId::from_key(settings.string("preset-id").as_str())
 }
 
-fn format_session_length(length: SessionLength) -> String {
-    match length.minutes() {
-        0 => tr("無制限", "Unlimited").to_string(),
-        minutes if !is_english() => format!("{minutes} 分"),
-        minutes => format!("{minutes} min"),
-    }
-}
-
-fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
-    let dialog = adw::PreferencesDialog::new();
-    let page = adw::PreferencesPage::new();
-    let preset_group = adw::PreferencesGroup::new();
-    preset_group.set_title(tr("呼吸法", "Breathing pattern"));
-    let selected = selected_preset(settings);
+fn show_preset_dialog(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
+    let choices = gtk::ListBox::new();
+    choices.set_selection_mode(gtk::SelectionMode::None);
+    choices.add_css_class("boxed-list");
+    let selected = Rc::new(Cell::new(selected_preset(settings)));
     let mut group_button = None;
-    for (index, id) in PresetId::ALL.into_iter().enumerate() {
+    for id in PresetId::ALL {
         let row = adw::ActionRow::builder()
             .title(preset_name(id))
             .subtitle(preset_details(id))
@@ -364,56 +405,43 @@ fn show_preferences(window: &adw::ApplicationWindow, settings: &gtk::gio::Settin
         } else {
             group_button = Some(button.clone());
         }
-        button.set_active(id == selected);
-        let settings_for_preset = settings.clone();
+        button.set_active(id == selected.get());
+        let selected_for_preset = selected.clone();
         button.connect_toggled(move |button| {
             if button.is_active() {
-                let id = PresetId::ALL[index];
-                let _ = settings_for_preset.set_string("preset-id", id.key());
+                selected_for_preset.set(id);
             }
         });
         row.add_suffix(&button);
         row.set_activatable_widget(Some(&button));
-        preset_group.add(&row);
+        choices.append(&row);
     }
-    page.add(&preset_group);
-
-    let group = adw::PreferencesGroup::new();
-    group.set_title(tr("セッション", "Session"));
-
-    let duration = adw::SpinRow::with_range(0.0, f64::from(SessionLength::MAX_MINUTES), 1.0);
-    duration.set_title(tr("セッション時間（分）", "Session length (minutes)"));
-    duration.set_value(f64::from(session_length(settings).minutes()));
-    duration.set_subtitle(tr("0 分は無制限です", "0 means unlimited"));
-    let settings_for_duration = settings.clone();
-    duration.connect_value_notify(move |row| {
-        let minutes = row
-            .value()
-            .round()
-            .clamp(0.0, f64::from(SessionLength::MAX_MINUTES));
-        let _ = settings_for_duration.set_uint("session-minutes", minutes as u32);
+    let scroll = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .min_content_height(260)
+        .max_content_height(360)
+        .child(&choices)
+        .build();
+    let dialog = adw::AlertDialog::new(
+        Some(tr("呼吸法を選ぶ", "Choose breathing pattern")),
+        Some(tr(
+            "自分に合った呼吸法を選択してください。",
+            "Choose the breathing pattern that suits you.",
+        )),
+    );
+    dialog.set_extra_child(Some(&scroll));
+    dialog.add_responses(&[
+        ("cancel", tr("キャンセル", "Cancel")),
+        ("apply", tr("選択", "Select")),
+    ]);
+    dialog.set_default_response(Some("apply"));
+    dialog.set_close_response("cancel");
+    let settings_for_preset = settings.clone();
+    dialog.connect_response(None, move |_, response| {
+        if response == "apply" {
+            let _ = settings_for_preset.set_string("preset-id", selected.get().key());
+        }
     });
-    group.add(&duration);
-
-    let voice = adw::ComboRow::new();
-    voice.set_title(tr("ガイド音声", "Guidance audio"));
-    voice.set_model(Some(&gtk::StringList::new(&[
-        "Paul",
-        "Laura",
-        tr("ベル", "Bell"),
-        tr("オフ", "Off"),
-    ])));
-    voice.set_selected(audio_mode_index(AudioMode::from_key(
-        settings.string("audio-mode").as_str(),
-    )));
-    let settings_for_voice = settings.clone();
-    voice.connect_selected_notify(move |row| {
-        let _ =
-            settings_for_voice.set_string("audio-mode", audio_mode_for_index(row.selected()).key());
-    });
-    group.add(&voice);
-    page.add(&group);
-    dialog.add(&page);
     dialog.present(Some(window));
 }
 
@@ -578,29 +606,18 @@ fn format_remaining(remaining: Option<u32>) -> String {
 
 fn format_countdown(remaining: Option<u32>) -> String {
     let seconds = remaining.unwrap_or(0).div_ceil(1_000);
-    if !is_english() {
-        format!("開始まで {seconds}")
-    } else {
-        format!("Starts in {seconds}")
-    }
+    seconds.to_string()
 }
 
-fn step_hint(step: StepKind) -> &'static str {
+fn step_hint(step: StepKind, duration_ms: u32) -> &'static str {
     match step {
+        StepKind::Inhale if duration_ms <= 3_000 => tr("短く吸う", "Breathe in briefly"),
         StepKind::Inhale => tr("ゆっくり大きく", "Slow and deep"),
-        StepKind::Exhale => tr("ゆっくり小さく", "Slow and gentle"),
+        StepKind::Exhale if duration_ms <= 3_000 => tr("短く吐く", "Breathe out briefly"),
+        StepKind::Exhale => tr("ゆっくり吐く", "Slow and steady"),
         StepKind::HoldAfterInhale | StepKind::HoldAfterExhale => {
             tr("そのまま保ちます", "Stay still")
         }
-    }
-}
-
-fn format_session_summary(length: SessionLength) -> String {
-    let formatted = format_session_length(length);
-    if !is_english() {
-        format!("セッション時間: {formatted}（設定は次回起動時に保存されます）")
-    } else {
-        format!("Session length: {formatted} (saved for the next launch)")
     }
 }
 
@@ -642,5 +659,13 @@ mod tests {
         let name = preset_name(PresetId::DeepCalm);
 
         assert!(!name.contains("4-7-8"));
+    }
+
+    #[test]
+    fn short_exhale_hint_does_not_say_slowly() {
+        assert_eq!(
+            step_hint(StepKind::Exhale, 2_000),
+            tr("短く吐く", "Breathe out briefly")
+        );
     }
 }
