@@ -34,18 +34,36 @@
 
 ## Versioning
 
-- Each release operation must bump the minor version (for example, `0.1.0` to
-  `0.2.0`), including releases that contain only documentation or tooling
-  changes.
-- Keep the version synchronized in `Cargo.toml`, `breath.spec`, the AppStream
-  release metadata, and `CHANGELOG.md`.
-- Use only the RPM `Release` field for rebuilds that do not change behavior.
-- For a release, update all four version locations, commit and push the
-  release-ready `main`, then push a `vX.Y.0` tag. The release workflow in
-  `.github/workflows/release.yml` performs the Fedora build, validation,
-  checksum generation, attestation, and GitHub Release asset upload.
-- Do not upload locally built release assets manually; the tagged workflow is
-  the source of truth for published RPMs and source tarballs.
+- A published release always increments the minor version and uses patch zero
+  (for example, `0.7.0` to `0.8.0`), including documentation- or tooling-only
+  releases. A same-version rebuild that is *not* a published release may change
+  only the RPM `Release` field.
+- Before tagging, choose the new `X.Y.0` and release date, then update every
+  version-bearing source in one coherent change:
+  1. `Cargo.toml`: `[package] version`; refresh `Cargo.lock` so its root
+     `breath` package entry matches.
+  2. `breath.spec`: `Version` and a new top `%changelog` entry. `Source0`
+     derives its archive name from `%{version}` and must not be hard-coded.
+  3. `data/io.github.moriwaka.Breath.metainfo.xml`: prepend a new `<release>`
+     with the exact version, ISO date, and user-facing notes.
+  4. `CHANGELOG.md`: prepend `## X.Y.0` with the corresponding notes.
+  5. `README.md`: update literal RPM archive/install examples.
+  6. `data/breath.1`: update the `.TH` version and ISO date.
+  7. `AGENTS.md`: update only if it contains a literal release version; prefer
+     commands that derive the value from `Cargo.toml`.
+- Confirm the four release-gate locations match the intended tag before any
+  Git write: `Cargo.toml`, `breath.spec`, AppStream metadata, and
+  `CHANGELOG.md`. `.github/workflows/release.yml` enforces this same contract
+  for `vX.Y.0` tags.
+- Run the release verification (`cargo fmt -- --check`, `cargo test --offline`,
+  `cargo clippy --all-targets --offline -- -D warnings`, desktop-file and
+  AppStream validation), plus `git diff --check`. Build and inspect an RPM when
+  source or SPEC content changed.
+- Commit the release-ready `main`, push that commit, then create and push the
+  matching `vX.Y.0` tag from it. The tagged workflow builds, validates, checksums,
+  attests, and uploads the GitHub Release; do not upload local assets manually.
+- Do not report a release as published until the tag workflow succeeds and its
+  release assets are visible.
 
 ## Work files and RPM
 
@@ -56,10 +74,11 @@
 - Build an offline RPM from the repository root with a vendored source archive. The archive must include `vendor/` and `.cargo/config.toml`:
 
   ```sh
+  version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)"
   mkdir -p work/rpmbuild/SOURCES work/rpmbuild/TMP
   tar --exclude=.git --exclude=target --exclude=work --sort=name \
-    --transform='s,^\\./,breath-0.6.0/,' \
-    -czf work/rpmbuild/SOURCES/breath-0.6.0.tar.gz .
+    --transform="s,^\\./,breath-${version}/," \
+    -czf "work/rpmbuild/SOURCES/breath-${version}.tar.gz" .
   rpmbuild -ba breath.spec \
     --define '_topdir %{getenv:PWD}/work/rpmbuild' \
     --define '_sourcedir %{getenv:PWD}/work/rpmbuild/SOURCES' \
