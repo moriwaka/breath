@@ -9,6 +9,11 @@
   <languages><lang>en</lang><lang>ja</lang></languages>
   <description><p>Breath is a native GNOME application for calm, guided breathing exercises. Choose a pattern, set a session duration, and follow the visual phases at your own pace.</p></description>
   <releases>
+    <release version="0.8.0" date="2026-08-31">
+      <description>
+        <p>Improved GNOME accessibility coverage and made screenshot verification follow the real breathing session flow.</p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-08-31">
       <description>
         <p>The home-screen pattern summary now updates when the selection is changed in Preferences.</p>

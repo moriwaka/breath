@@ -34,9 +34,9 @@
 
 ## Versioning
 
-- A published release always increments the minor version and uses patch zero
-  (for example, `0.7.0` to `0.8.0`), including documentation- or tooling-only
-  releases. A same-version rebuild that is *not* a published release may change
+- A published release always increments the minor version and uses patch zero,
+  including documentation- or tooling-only releases. A same-version rebuild
+  that is *not* a published release may change
   only the RPM `Release` field.
 - Before tagging, choose the new `X.Y.0` and release date, then update every
   version-bearing source in one coherent change:

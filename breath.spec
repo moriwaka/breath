@@ -1,5 +1,5 @@
 Name:           breath
-Version:        0.7.0
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Guided breathing exercises for GNOME
 License:        MIT and MPL-2.0
@@ -53,6 +53,9 @@ appstreamcli validate --no-net data/io.github.moriwaka.Breath.metainfo.xml
 %{_datadir}/breath/audio/
 
 %changelog
+* Mon Aug 31 2026 Breath contributors - 0.8.0-1
+- Harden GNOME accessibility and Screenshot Portal verification
+
 * Mon Aug 31 2026 Breath contributors - 0.7.0-1
 - Refresh the home-screen pattern summary when the selection changes
 

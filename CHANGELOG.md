@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0
+
+- Improved GNOME accessibility coverage and Screenshot Portal verification.
+
 ## 0.7.0
 
 - Refresh the home-screen pattern summary when the selection changes in
