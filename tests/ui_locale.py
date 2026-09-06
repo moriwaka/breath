@@ -6,7 +6,20 @@ import subprocess
 import sys
 import time
 
-from ui_smoke import find_named, wait_for_application, walk
+from ui_smoke import find_named, terminate_process, wait_for_application, walk
+
+
+def restore_preset(value):
+    subprocess.run(
+        [
+            "gsettings",
+            "set",
+            "io.github.moriwaka.Breath",
+            "preset-id",
+            value,
+        ],
+        check=True,
+    )
 
 
 def main():
@@ -57,6 +70,7 @@ def main():
     if command[0].endswith("/breath") and command[0] != "breath":
         environment["GSETTINGS_SCHEMA_DIR"] = "work/gsettings"
     process = subprocess.Popen(command, env=environment)
+    original_preset = None
     try:
         app = wait_for_application()
         deadline = time.monotonic() + 3
@@ -101,6 +115,12 @@ def main():
 
         target_preset = "Awake" if initial_preset != "Awake" else "Deep Calm"
         target_key = {"Deep Calm": "deep-calm", "Awake": "awake"}[target_preset]
+        original_preset = subprocess.run(
+            ["gsettings", "get", "io.github.moriwaka.Breath", "preset-id"],
+            capture_output=True,
+            check=True,
+            text=True,
+        ).stdout.strip()
         subprocess.run(
             [
                 "gsettings",
@@ -135,12 +155,9 @@ def main():
         print("PASS: English locale names and inline settings controls are exposed via AT-SPI")
         return 0
     finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
+        terminate_process(process)
+        if original_preset is not None:
+            restore_preset(original_preset)
         pyatspi.Registry.stop()
 
 

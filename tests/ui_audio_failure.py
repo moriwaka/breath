@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from ui_smoke import find_named, invoke, wait_for_application
+from ui_smoke import find_named, invoke, terminate_process, wait_for_application
 
 
 def main():
@@ -78,12 +78,7 @@ def main():
             time.sleep(0.1)
         raise AssertionError("audio playback failure warning was not exposed")
     finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
+        terminate_process(process)
         pyatspi.Registry.stop()
 
 

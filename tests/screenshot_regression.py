@@ -8,7 +8,7 @@ import sys
 import time
 from pathlib import Path
 
-from ui_smoke import find_named, invoke, wait_for_application
+from ui_smoke import find_named, invoke, terminate_process, wait_for_application
 
 
 def start_session():
@@ -146,9 +146,7 @@ def main():
         print(f"PASS: captured native GNOME screenshots in {output}")
         return 0
     finally:
-        if process.poll() is None:
-            process.terminate()
-            process.wait(timeout=2)
+        terminate_process(process)
 
 
 if __name__ == "__main__":

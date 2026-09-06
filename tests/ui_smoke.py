@@ -53,6 +53,16 @@ def invoke(button):
     raise AssertionError(f"No click/press action for {button.name!r}: {available}")
 
 
+def terminate_process(process):
+    if process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+
 def main():
     if pyatspi is None:
         print("SKIP: pyatspi is not installed", file=sys.stderr)
@@ -77,14 +87,15 @@ def main():
         invoke(starts[0])
 
         seen = set()
-        deadline = time.monotonic() + 1.5
+        countdown_values = {"3", "2", "1"}
+        deadline = time.monotonic() + 4
         while time.monotonic() < deadline:
             app = wait_for_application(timeout=1)
-            seen.update(node.name for node in walk(app) if node.name == "3")
-            if "3" in seen:
+            seen.update(node.name for node in walk(app) if node.name in countdown_values)
+            if seen == countdown_values:
                 break
             time.sleep(0.1)
-        assert "3" in seen, f"countdown start not observed: {seen}"
+        assert seen == countdown_values, f"countdown values not observed: {seen}"
 
         countdown_stops = find_named(app, "停止", "button")
         assert countdown_stops, "countdown has no stop button"
@@ -97,7 +108,9 @@ def main():
             time.sleep(0.1)
         assert find_named(app, "開始", "button"), "countdown stop did not return home"
 
-        invoke(find_named(app, "開始", "button")[0])
+        starts = find_named(app, "開始", "button")
+        assert starts, "home screen has no accessible start action after countdown stop"
+        invoke(starts[-1])
 
         deadline = time.monotonic() + 4
         while time.monotonic() < deadline:
@@ -120,12 +133,7 @@ def main():
         print("PASS: home, countdown, and session controls are exposed via AT-SPI")
         return 0
     finally:
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
+        terminate_process(process)
         pyatspi.Registry.stop()
 
 

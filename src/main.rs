@@ -206,7 +206,6 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         let _ = cr.stroke();
         let radius = max_radius * scale;
         cr.set_source_rgba(0.18, 0.47, 0.56, 0.85);
-        cr.set_source_rgba(0.18, 0.47, 0.56, 0.85);
         cr.arc(
             f64::from(width) / 2.0,
             f64::from(height) / 2.0,
