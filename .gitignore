@@ -1,4 +1,5 @@
 /target/
+/tests/__pycache__/
 *.rpm
 *.src.rpm
 *.tar.gz
