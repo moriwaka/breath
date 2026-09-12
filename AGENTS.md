@@ -11,7 +11,7 @@
 
 - `src/lib.rs`: testable breathing domain model, built-in presets, settings types, audio mapping, and session state machine.
 - `src/main.rs`: GTK4/Libadwaita application, GSettings preferences, GStreamer audio playback, and session UI.
-- `tests/`: Rust integration tests for presets, session lifecycle, and settings/audio mapping.
+- `tests/`: Rust integration tests plus Python AT-SPI and Screenshot Portal regression harnesses.
 - `data/`: desktop entry, GSettings schema, AppStream metadata, and the 512px application icon.
 - `assets/audio/`: bundled MP3 guidance and completion cues.
 - `breath.spec`: Fedora RPM build and file manifest.
@@ -30,6 +30,10 @@
 - Run `python3 tests/screenshot_regression.py` in a GNOME session with the
   Screenshot Portal available for native screen captures; it skips when the
   portal is unavailable or the request is not approved.
+- For a session UI change, compile the schema into `work/gsettings`, then run
+  the relevant `tests/ui_smoke.py`, `tests/ui_locale.py`, or
+  `tests/ui_audio_failure.py` against the checkout binary in a real GNOME
+  session. Exit 77 is an environment skip, not a passing UI check.
 - Do not add web UI dependencies or remote runtime assets.
 
 ## Versioning
