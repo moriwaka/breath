@@ -119,7 +119,35 @@ def main():
                 break
             time.sleep(0.1)
         assert find_named(app, "吸う", "label"), "session did not start after countdown"
-        assert find_named(app, "一時停止", "button"), "session has no pause button"
+        pauses = find_named(app, "一時停止", "button")
+        assert pauses, "session has no pause button"
+        invoke(pauses[-1])
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            app = wait_for_application(timeout=1)
+            if find_named(app, "一時停止中", "label"):
+                break
+            time.sleep(0.1)
+        assert find_named(app, "一時停止中", "label"), "paused state is not clearly exposed"
+
+        resumes = find_named(app, "再開", "button")
+        assert resumes, "paused session has no resume button"
+        invoke(resumes[-1])
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            app = wait_for_application(timeout=1)
+            if find_named(app, "再開まで", "label"):
+                break
+            time.sleep(0.1)
+        assert find_named(app, "再開まで", "label"), "resume countdown is not exposed"
+
+        deadline = time.monotonic() + 4
+        while time.monotonic() < deadline:
+            app = wait_for_application(timeout=1)
+            if find_named(app, "一時停止", "button"):
+                break
+            time.sleep(0.1)
+        assert find_named(app, "一時停止", "button"), "pause button was not restored after resume"
         stops = find_named(app, "停止", "button")
         assert stops, "session has no stop button"
         invoke(stops[0])
@@ -130,7 +158,7 @@ def main():
                 break
             time.sleep(0.1)
         assert find_named(app, "開始", "button"), "stop did not return home"
-        print("PASS: home, countdown, and session controls are exposed via AT-SPI")
+        print("PASS: home, countdown, pause/resume, and session controls are exposed via AT-SPI")
         return 0
     finally:
         terminate_process(process)

@@ -224,6 +224,8 @@ pub struct Session {
     session_elapsed_ms: u32,
     session_limit_ms: Option<u32>,
     countdown_remaining_ms: Option<u32>,
+    countdown_is_resume: bool,
+    completed_cycles: u32,
     status: SessionStatus,
 }
 
@@ -243,6 +245,8 @@ impl Session {
             session_elapsed_ms: 0,
             session_limit_ms,
             countdown_remaining_ms: None,
+            countdown_is_resume: false,
+            completed_cycles: 0,
         }
     }
 
@@ -268,6 +272,11 @@ impl Session {
         self.countdown_remaining_ms
     }
 
+    /// Returns whether the current countdown resumes a paused session.
+    pub fn is_resuming(&self) -> bool {
+        self.status == SessionStatus::Countdown && self.countdown_is_resume
+    }
+
     pub fn current_step(&self) -> Option<(StepKind, u32)> {
         (self.status == SessionStatus::Running || self.status == SessionStatus::Paused)
             .then(|| self.steps[self.phase_index])
@@ -289,6 +298,16 @@ impl Session {
             .map(|limit| limit.saturating_sub(self.session_elapsed_ms))
     }
 
+    /// Returns active breathing time, excluding preparation countdowns and pauses.
+    pub fn elapsed_ms(&self) -> u32 {
+        self.session_elapsed_ms
+    }
+
+    /// Returns the number of fully completed breathing cycles.
+    pub fn completed_cycles(&self) -> u32 {
+        self.completed_cycles
+    }
+
     pub fn pause(&mut self) {
         if self.status == SessionStatus::Running {
             self.status = SessionStatus::Paused;
@@ -299,6 +318,20 @@ impl Session {
         if self.status == SessionStatus::Paused {
             self.status = SessionStatus::Running;
         }
+    }
+
+    /// Resumes a paused session after a short countdown, preserving its progress.
+    pub fn resume_after_countdown(&mut self, countdown_ms: u32) {
+        if self.status != SessionStatus::Paused {
+            return;
+        }
+        if countdown_ms == 0 {
+            self.resume();
+            return;
+        }
+        self.status = SessionStatus::Countdown;
+        self.countdown_remaining_ms = Some(countdown_ms);
+        self.countdown_is_resume = true;
     }
 
     pub fn stop(&mut self) {
@@ -319,6 +352,7 @@ impl Session {
                 return;
             }
             self.countdown_remaining_ms = None;
+            self.countdown_is_resume = false;
             self.status = SessionStatus::Running;
             self.advance(elapsed_ms - remaining);
             return;
@@ -360,6 +394,9 @@ impl Session {
             elapsed_ms -= remaining_ms;
             self.phase_elapsed_ms = 0;
             self.phase_index = (self.phase_index + 1) % self.steps.len();
+            if self.phase_index == 0 {
+                self.completed_cycles = self.completed_cycles.saturating_add(1);
+            }
         }
     }
 }

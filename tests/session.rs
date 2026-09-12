@@ -116,3 +116,35 @@ fn countdown_session_can_be_stopped_before_breathing_starts() {
     assert_eq!(session.status(), SessionStatus::Stopped);
     assert_eq!(session.countdown_remaining_ms(), Some(3_000));
 }
+
+#[test]
+fn paused_session_resumes_after_a_new_countdown_without_losing_progress() {
+    let mut session = Session::start(preset_by_id(PresetId::Square), Some(300_000));
+
+    session.advance(1_500);
+    session.pause();
+    session.resume_after_countdown(3_000);
+
+    assert_eq!(session.status(), SessionStatus::Countdown);
+    assert!(session.is_resuming());
+    assert_eq!(session.countdown_remaining_ms(), Some(3_000));
+    assert_eq!(session.phase_remaining_ms(), None);
+
+    session.advance(3_000);
+
+    assert_eq!(session.status(), SessionStatus::Running);
+    assert!(!session.is_resuming());
+    assert_eq!(session.phase_remaining_ms(), Some(2_500));
+    assert_eq!(session.session_remaining_ms(), Some(298_500));
+}
+
+#[test]
+fn completed_session_reports_elapsed_time_and_full_cycles() {
+    let mut session = Session::start(preset_by_id(PresetId::Square), Some(18_000));
+
+    session.advance(18_000);
+
+    assert_eq!(session.status(), SessionStatus::Completed);
+    assert_eq!(session.elapsed_ms(), 18_000);
+    assert_eq!(session.completed_cycles(), 1);
+}

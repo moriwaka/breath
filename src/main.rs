@@ -172,6 +172,9 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let remaining = gtk::Label::new(None);
     remaining.add_css_class("title-2");
     remaining.set_visible(false);
+    let phase_remaining = gtk::Label::new(None);
+    phase_remaining.add_css_class("dim-label");
+    phase_remaining.set_visible(false);
     let countdown = gtk::Label::new(Some("3"));
     countdown.add_css_class("title-1");
     let hint = gtk::Label::new(Some(tr("準備しましょう", "Get ready")));
@@ -243,6 +246,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     content.append(&guide);
     content.append(&countdown);
     content.append(&phase);
+    content.append(&phase_remaining);
     content.append(&hint);
     content.append(&audio_warning);
     content.append(&remaining);
@@ -266,6 +270,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let timer_hint = hint.clone();
     let timer_pause = pause.clone();
     let timer_remaining = remaining.clone();
+    let timer_phase_remaining = phase_remaining.clone();
     let timer_countdown = countdown.clone();
     let timer_guide = guide.clone();
     let timer_audio = audio.clone();
@@ -273,6 +278,7 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
     let timer_audio_warning = audio_warning.clone();
     let timer_progress = guide_progress.clone();
     let timer_kind = guide_kind.clone();
+    let timer_window = window.clone();
     let mut announced_step = session.borrow().current_step().map(|(kind, _)| kind);
     gtk::glib::timeout_add_local(Duration::from_millis(100), move || {
         let mut current = timer_session.borrow_mut();
@@ -283,14 +289,38 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         if current.status() == SessionStatus::Countdown {
             timer_countdown.set_visible(true);
             timer_remaining.set_visible(false);
-            timer_phase.set_label(tr("開始まで", "Starts in"));
+            timer_phase_remaining.set_visible(false);
+            timer_phase.set_label(if current.is_resuming() {
+                tr("再開まで", "Resumes in")
+            } else {
+                tr("開始まで", "Starts in")
+            });
             timer_hint.set_visible(false);
             timer_countdown.set_label(&format_countdown(current.countdown_remaining_ms()));
+        } else if current.status() == SessionStatus::Paused {
+            timer_countdown.set_visible(false);
+            timer_remaining.set_visible(true);
+            timer_phase.set_label(tr("一時停止中", "Paused"));
+            timer_phase_remaining.set_label(&format_phase_remaining(current.phase_remaining_ms()));
+            timer_phase_remaining.set_visible(true);
+            timer_hint.set_label(tr(
+                "再開を押すと3秒後に続きから再開します",
+                "Press Resume to continue after a 3-second countdown",
+            ));
+            timer_hint.set_visible(true);
         } else if let Some((kind, duration)) = current.current_step() {
             timer_countdown.set_visible(false);
             timer_remaining.set_visible(true);
-            timer_pause.set_sensitive(true);
+            if !timer_pause.is_sensitive() {
+                timer_pause.set_sensitive(true);
+                timer_pause.set_label(tr("一時停止", "Pause"));
+                timer_pause.set_tooltip_text(Some(tr("一時停止", "Pause")));
+                timer_pause
+                    .update_property(&[gtk::accessible::Property::Label(tr("一時停止", "Pause"))]);
+            }
             timer_phase.set_label(step_name(kind));
+            timer_phase_remaining.set_label(&format_phase_remaining(current.phase_remaining_ms()));
+            timer_phase_remaining.set_visible(true);
             timer_hint.set_label(step_hint(kind, duration));
             timer_hint.set_visible(true);
             *timer_progress.borrow_mut() = current.phase_progress().unwrap_or(0.0);
@@ -309,7 +339,6 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
         timer_remaining.set_label(&format_remaining(current.session_remaining_ms()));
         timer_guide.queue_draw();
         if current.status() == SessionStatus::Completed {
-            timer_phase.set_label(tr("完了しました", "Complete"));
             let mode = AudioMode::from_key(timer_settings.string("audio-mode").as_str());
             let warning_for_error = timer_audio_warning.clone();
             if mode.plays_completion_cue()
@@ -320,6 +349,13 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
                 timer_audio_warning.set_label(completion_warning_message());
                 timer_audio_warning.set_visible(true);
             }
+            show_completion(
+                &timer_window,
+                &timer_settings,
+                id,
+                current.elapsed_ms(),
+                current.completed_cycles(),
+            );
             return gtk::glib::ControlFlow::Break;
         }
         gtk::glib::ControlFlow::Continue
@@ -334,10 +370,8 @@ fn show_session(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings, 
             button.set_tooltip_text(Some(tr("セッションを再開", "Resume session")));
             button.update_property(&[gtk::accessible::Property::Label(tr("再開", "Resume"))]);
         } else if current.status() == SessionStatus::Paused {
-            current.resume();
-            button.set_label(tr("一時停止", "Pause"));
-            button.set_tooltip_text(Some(tr("一時停止", "Pause")));
-            button.update_property(&[gtk::accessible::Property::Label(tr("一時停止", "Pause"))]);
+            current.resume_after_countdown(3_000);
+            button.set_sensitive(false);
         }
     });
     let stop_session = session.clone();
@@ -389,6 +423,55 @@ fn session_length(settings: &gtk::gio::Settings) -> SessionLength {
 
 fn selected_preset(settings: &gtk::gio::Settings) -> PresetId {
     PresetId::from_key(settings.string("preset-id").as_str())
+}
+
+fn show_completion(
+    window: &adw::ApplicationWindow,
+    settings: &gtk::gio::Settings,
+    id: PresetId,
+    elapsed_ms: u32,
+    completed_cycles: u32,
+) {
+    let repeat = gtk::Button::with_label(tr("もう一度", "Do it again"));
+    repeat.add_css_class("suggested-action");
+    repeat.set_tooltip_text(Some(tr(
+        "同じ設定でもう一度始める",
+        "Start again with the same settings",
+    )));
+    repeat.update_property(&[gtk::accessible::Property::Label(tr(
+        "もう一度",
+        "Do it again",
+    ))]);
+    let window_for_repeat = window.clone();
+    let settings_for_repeat = settings.clone();
+    repeat.connect_clicked(move |_| show_session(&window_for_repeat, &settings_for_repeat, id));
+
+    let home = gtk::Button::with_label(tr("ホームへ戻る", "Back to home"));
+    home.set_tooltip_text(Some(tr("ホームへ戻る", "Back to home")));
+    home.update_property(&[gtk::accessible::Property::Label(tr(
+        "ホームへ戻る",
+        "Back to home",
+    ))]);
+    let window_for_home = window.clone();
+    let settings_for_home = settings.clone();
+    home.connect_clicked(move |_| show_home(&window_for_home, &settings_for_home));
+
+    let actions = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    actions.set_halign(gtk::Align::Center);
+    actions.append(&repeat);
+    actions.append(&home);
+    let page = adw::StatusPage::builder()
+        .icon_name("emblem-ok-symbolic")
+        .title(tr("完了しました", "Complete"))
+        .description(format_completion_summary(elapsed_ms, completed_cycles))
+        .child(&actions)
+        .build();
+    let header = adw::HeaderBar::new();
+    header.set_title_widget(Some(&adw::WindowTitle::new("Breath", preset_name(id))));
+    let toolbar = adw::ToolbarView::new();
+    toolbar.add_top_bar(&header);
+    toolbar.set_content(Some(&page));
+    window.set_content(Some(&toolbar));
 }
 
 fn show_preset_dialog(window: &adw::ApplicationWindow, settings: &gtk::gio::Settings) {
@@ -669,6 +752,25 @@ fn format_remaining(remaining: Option<u32>) -> String {
             }
         }
         None => tr("無制限セッション", "Unlimited session").to_string(),
+    }
+}
+
+fn format_phase_remaining(remaining: Option<u32>) -> String {
+    let seconds = remaining.unwrap_or(0).div_ceil(1_000);
+    if is_english() {
+        format!("{seconds}s in this phase")
+    } else {
+        format!("この段階は残り{seconds}秒")
+    }
+}
+
+fn format_completion_summary(elapsed_ms: u32, completed_cycles: u32) -> String {
+    let elapsed_seconds = elapsed_ms / 1_000;
+    let duration = format!("{}:{:02}", elapsed_seconds / 60, elapsed_seconds % 60);
+    if is_english() {
+        format!("{duration} · {completed_cycles} full cycles")
+    } else {
+        format!("{duration} ・ {completed_cycles}サイクル完了")
     }
 }
 
